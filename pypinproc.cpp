@@ -34,95 +34,6 @@ PinPROC_dealloc(PyObject* _self)
     self->ob_type->tp_free((PyObject*)self);
 }
 
-void ConfigureDrivers(PRHandle proc, PRMachineType machineType)
-{
-    int i;
-    int mappedDriverGroupEnableIndex[kPRDriverGroupsMax];
-    int mappedWPCDriverGroupEnableIndex[] = {0, 0, 0, 0, 0, 2, 4, 3, 1, 5, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 0, 0, 0};
-    int rowEnableIndex1;
-    int rowEnableIndex0;
-    bool tickleSternWatchdog;
-    bool globalPolarity;
-    bool activeLowMatrixRows;
-    int driverLoopTime;
-    int watchdogResetTime;
-    int slowGroupTime;
-
-    switch (machineType) 
-    {
-        case kPRMachineWPC: {
-            memcpy(mappedDriverGroupEnableIndex,mappedWPCDriverGroupEnableIndex, sizeof(mappedDriverGroupEnableIndex)); 
-            rowEnableIndex1 = 6; // Unused in WPC
-            rowEnableIndex0 = 6;
-            tickleSternWatchdog = false;
-            globalPolarity = false;
-            activeLowMatrixRows = true;
-            driverLoopTime = 4; // milliseconds
-            watchdogResetTime = 1000; // milliseconds
-            slowGroupTime = driverLoopTime * 100; // microseconds
-            break;
-        }
-    }
-
-    PRDriverGlobalConfig globals;
-    globals.enableOutputs = false;
-    globals.globalPolarity = globalPolarity;
-    globals.useClear = false;
-    globals.strobeStartSelect = false;
-    globals.startStrobeTime = driverLoopTime; // milliseconds per output loop
-    globals.matrixRowEnableIndex1 = rowEnableIndex1;
-    globals.matrixRowEnableIndex0 = rowEnableIndex0;
-    globals.activeLowMatrixRows = activeLowMatrixRows;
-    globals.tickleSternWatchdog = tickleSternWatchdog;
-    globals.encodeEnables = false;
-    globals.watchdogExpired = false;
-    globals.watchdogEnable = true;
-    globals.watchdogResetTime = watchdogResetTime;
-
-    // We want to start up safely, so we'll update the global driver config twice.
-    // When we toggle enableOutputs like this P-ROC will reset the polarity:
-
-    // Enable now without the outputs enabled:
-    PRDriverUpdateGlobalConfig(proc, &globals);
-
-    // Now enable the outputs:  (TODO: Why?)
-    globals.enableOutputs = true;
-    PRDriverUpdateGlobalConfig(proc, &globals);
-
-    // Configure the groups.  Each group corresponds to 8 consecutive drivers, starting
-    // with driver #32.  The following 6 groups are configured for coils/flashlamps.
-
-    PRDriverGroupConfig group;
-    for (i = 4; i < 10; i++)
-    {
-        PRDriverGetGroupConfig(proc, i, &group);
-        group.slowTime = 0;
-        group.enableIndex = mappedDriverGroupEnableIndex[i];
-        group.rowActivateIndex = 0;
-        group.rowEnableSelect = 0;
-        group.matrixed = false;
-        group.polarity = false;
-        group.active = 1;
-        group.disableStrobeAfter = false;
-
-        PRDriverUpdateGroupConfig(proc, &group);
-    }
-
-    // The following 8 groups are configured for the feature lamp matrix.
-    for (i = 10; i < 18; i++) {
-        PRDriverGetGroupConfig(proc, i, &group);
-        group.slowTime = slowGroupTime;
-        group.enableIndex = mappedDriverGroupEnableIndex[i];
-        group.rowActivateIndex = i - 10;
-        group.rowEnableSelect = 0;
-        group.matrixed = 1;
-        group.polarity = 0;
-        group.active = 1;
-        group.disableStrobeAfter = 1;
-        PRDriverUpdateGroupConfig(proc, &group);
-    }
-}
-
 static int
 PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
@@ -147,17 +58,30 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	
 	if (self->handle == kPRHandleInvalid)
 	{
-		PyErr_SetString(PyExc_IOError, "Error creating P-ROC handle");
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText());
 		return -1;
 	}
-	
-	ConfigureDrivers(self->handle, machineType);
 
     return 0;
 }
 
 static PyObject *
-PinPROC_DriverPulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+PinPROC_reset(pinproc_PinPROCObject *self, PyObject *args)
+{
+	uint32_t resetFlags;
+	if (!PyArg_ParseTuple(args, "i", &resetFlags))
+		return NULL;
+	if (PRReset(self->handle, resetFlags) == kPRFailure)
+	{
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText());
+		return NULL;
+	}
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static PyObject *
+PinPROC_driver_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, milliseconds;
 	static char *kwlist[] = {"number", "milliseconds", NULL};
@@ -183,6 +107,34 @@ PinPROC_DriverPulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	}
 }
 
+static PyObject *
+PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number, schedule, cycleSeconds;
+	PyObject *now;
+	static char *kwlist[] = {"number", "schedule", "cycleSeconds", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiO", kwlist, &number, &schedule, &cycleSeconds, &now))
+	{
+		return NULL;
+	}
+	
+	PRResult res;
+	res = PRDriverSchedule(self->handle, number, schedule, cycleSeconds, now == Py_True);
+	if (res == kPRSuccess)
+	{
+		PRDriverWatchdogTickle(self->handle);
+		PRFlushWriteData(self->handle);
+		
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error pulsing driver");
+		return NULL;
+	}
+}
+
 // static PyMemberDef PinPROC_members[] = {
 //     // {"first", T_OBJECT_EX, offsetof(Noddy, first), 0,
 //     //  "first name"},
@@ -193,8 +145,14 @@ PinPROC_DriverPulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 //     {NULL, NULL, NULL, 0, NULL}  /* Sentinel */
 // };
 static PyMethodDef PinPROC_methods[] = {
-    {"driver_pulse", (PyCFunction)PinPROC_DriverPulse, METH_VARARGS | METH_KEYWORDS,
+    {"driver_pulse", (PyCFunction)PinPROC_driver_pulse, METH_VARARGS | METH_KEYWORDS,
      "Pulses the specified driver"
+    },
+    {"driver_schedule", (PyCFunction)PinPROC_driver_schedule, METH_VARARGS | METH_KEYWORDS,
+     "Schedules the specified driver"
+    },
+    {"reset", (PyCFunction)PinPROC_reset, METH_VARARGS,
+     "Loads defaults into memory and optionally writes them to hardware."
     },
     {NULL, NULL, NULL, NULL}  /* Sentinel */
 };
