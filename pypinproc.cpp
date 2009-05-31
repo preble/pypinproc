@@ -34,6 +34,15 @@ PinPROC_dealloc(PyObject* _self)
     self->ob_type->tp_free((PyObject*)self);
 }
 
+PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
+{
+	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
+		return kPRMachineWPC;
+	else if (strcmp(PyString_AsString(machineTypeObj), "stern") == 0)
+		return  kPRMachineStern;
+	return kPRMachineInvalid;
+}
+
 static int
 PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
@@ -43,12 +52,8 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	{
 		return -1;
 	}
-	PRMachineType machineType = kPRMachineInvalid;
-	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
-		machineType = kPRMachineWPC;
-	else if (strcmp(PyString_AsString(machineTypeObj), "stern") == 0)
-		machineType = kPRMachineStern;
-	else
+	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
+	if (machineType == kPRMachineInvalid)
 	{
 		PyErr_SetString(PyExc_ValueError, "Unknown machine type.  Expecting 'wpc' or 'stern'.");
 		return -1;
@@ -200,27 +205,19 @@ static PyTypeObject pinproc_PinPROCType = {
 };
 
 
-static PyObject *Test(PyObject *self, PyObject *args)
+static PyObject *
+pinproc_decode(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	return Py_BuildValue("i", 42);
-	//  	fprintf(stderr, "\nHowdy\n\n");
-	// // PyObject *list = PyList_New(0);
-	// // return list;
-	// int a = 0, b = 1, c, n;
-	// if (!PyArg_ParseTuple(args, "i", &n))
-	//     return NULL;
-	// PyObject *list = PyList_New(0);
-	// while(b < n){
-	//     PyList_Append(list, PyInt_FromLong(b));
-	//     c = a+b;
-	//     a = b;
-	//     b = c;
-	// }
-	// return list;
+	PyObject *str, *machineTypeObj;
+	static char *kwlist[] = {"machine_type", "number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &machineTypeObj, &str))
+		return NULL;
+	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
+	return Py_BuildValue("i", PRDecode(machineType, PyString_AsString(str)));
 }
 
 PyMethodDef methods[] = {
-		{"test", Test, METH_VARARGS, "Test function"},
+		{"decode", (PyCFunction)pinproc_decode, METH_VARARGS | METH_KEYWORDS, "Decode a switch, coil, or lamp number."},
 		{NULL, NULL, 0, NULL}};
 
 PyMODINIT_FUNC initpinproc()
