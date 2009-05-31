@@ -140,6 +140,24 @@ PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *k
 	}
 }
 
+static PyObject *
+PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
+{
+	PyObject *list = PyList_New(0);
+	
+	const int maxEvents = 16;
+	PREvent events[maxEvents];
+	int numEvents = PRGetEvents(self->handle, events, maxEvents);
+	for (int i = 0; i < numEvents; i++)
+	{
+		PyObject *dict = PyDict_New();
+		PyDict_SetItemString(dict, "type", Py_BuildValue("i", events[i].type));
+		PyDict_SetItemString(dict, "value", Py_BuildValue("i", events[i].value));
+		PyList_Append(list, dict);
+	}
+	return list;
+}
+
 // static PyMemberDef PinPROC_members[] = {
 //     // {"first", T_OBJECT_EX, offsetof(Noddy, first), 0,
 //     //  "first name"},
@@ -155,6 +173,9 @@ static PyMethodDef PinPROC_methods[] = {
     },
     {"driver_schedule", (PyCFunction)PinPROC_driver_schedule, METH_VARARGS | METH_KEYWORDS,
      "Schedules the specified driver"
+    },
+    {"get_events", (PyCFunction)PinPROC_get_events, METH_VARARGS,
+     "Fetches recent events from P-ROC."
     },
     {"reset", (PyCFunction)PinPROC_reset, METH_VARARGS,
      "Loads defaults into memory and optionally writes them to hardware."
