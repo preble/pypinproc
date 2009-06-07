@@ -58,7 +58,7 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_ValueError, "Unknown machine type.  Expecting 'wpc' or 'stern'.");
 		return -1;
 	}
-	
+	//PRLogSetLevel(kPRLogVerbose);
 	self->handle = PRCreate(machineType);
 	
 	if (self->handle == kPRHandleInvalid)
@@ -66,6 +66,7 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText());
 		return -1;
 	}
+	PRDriverLoadMachineTypeDefaults(self->handle, machineType);
 
     return 0;
 }
@@ -115,19 +116,19 @@ PinPROC_driver_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds
 static PyObject *
 PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
-	int number, schedule, cycleSeconds;
+	int number, cycleSeconds;
+	int schedule;
 	PyObject *now;
-	static char *kwlist[] = {"number", "schedule", "cycleSeconds", "now", NULL};
+	static char *kwlist[] = {"number", "schedule", "cycle_seconds", "now", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiO", kwlist, &number, &schedule, &cycleSeconds, &now))
 	{
 		return NULL;
 	}
 	
 	PRResult res;
-	res = PRDriverSchedule(self->handle, number, schedule, cycleSeconds, now == Py_True);
+	res = PRDriverSchedule(self->handle, number, (uint32_t)schedule, cycleSeconds, now == Py_True);
 	if (res == kPRSuccess)
 	{
-		PRDriverWatchdogTickle(self->handle);
 		PRFlushWriteData(self->handle);
 		
 		Py_INCREF(Py_None);
@@ -138,6 +139,246 @@ PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *k
 		PyErr_SetString(PyExc_IOError, "Error pulsing driver");
 		return NULL;
 	}
+}
+
+static PyObject *
+PinPROC_driver_patter(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number, millisOn, millisOff, originalOnTime;
+	static char *kwlist[] = {"number", "milliseconds_on", "milliseconds_off", "original_on_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii", kwlist, &number, &millisOn, &millisOff, &originalOnTime))
+		return NULL;
+	
+	PRResult res;
+	res = PRDriverPatter(self->handle, number, millisOn, millisOff, originalOnTime);
+	if (res == kPRSuccess)
+	{
+		PRFlushWriteData(self->handle);
+		
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error pattering driver");
+		return NULL;
+	}
+}
+
+static PyObject *
+PinPROC_driver_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number;
+	static char *kwlist[] = {"number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &number))
+	{
+		return NULL;
+	}
+	
+	PRResult res;
+	res = PRDriverDisable(self->handle, number);
+	if (res == kPRSuccess)
+	{
+		PRDriverWatchdogTickle(self->handle);
+		PRFlushWriteData(self->handle);
+		
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error disabling driver");
+		return NULL;
+	}
+}
+
+#define DICT_SET_STRING_INT(name, value) PyDict_SetItemString(dict, name, Py_BuildValue("i", value))
+#define DICT_GET_STRING_INT(name, value) { long v = PyInt_AsLong(PyDict_GetItemString(dict, name)); if (v == -1 && PyErr_Occurred()) return false; value = v; }
+
+PyObject *PyDictFromDriverState(PRDriverState *driver)
+{
+	PyObject *dict = PyDict_New();
+	DICT_SET_STRING_INT("driverNum", driver->driverNum);
+	DICT_SET_STRING_INT("outputDriveTime", driver->outputDriveTime);
+	DICT_SET_STRING_INT("polarity", driver->polarity);
+	DICT_SET_STRING_INT("state", driver->state);
+	DICT_SET_STRING_INT("waitForFirstTimeSlot", driver->waitForFirstTimeSlot);
+	DICT_SET_STRING_INT("timeslots", driver->timeslots);
+	DICT_SET_STRING_INT("patterOnTime", driver->patterOnTime);
+	DICT_SET_STRING_INT("patterOffTime", driver->patterOffTime);
+	DICT_SET_STRING_INT("patterEnable", driver->patterEnable);
+	return dict;
+}
+bool PyDictToDriverState(PyObject *dict, PRDriverState *driver)
+{
+	DICT_GET_STRING_INT("driverNum", driver->driverNum);
+	DICT_GET_STRING_INT("outputDriveTime", driver->outputDriveTime);
+	DICT_GET_STRING_INT("polarity", driver->polarity);
+	DICT_GET_STRING_INT("state", driver->state);
+	DICT_GET_STRING_INT("waitForFirstTimeSlot", driver->waitForFirstTimeSlot);
+	DICT_GET_STRING_INT("timeslots", driver->timeslots);
+	DICT_GET_STRING_INT("patterOnTime", driver->patterOnTime);
+	DICT_GET_STRING_INT("patterOffTime", driver->patterOffTime);
+	DICT_GET_STRING_INT("patterEnable", driver->patterEnable);
+	return true;
+}
+
+PyObject *PyDictFromSwitchRule(PRSwitchRule *sw)
+{
+	PyObject *dict = PyDict_New();
+	DICT_SET_STRING_INT("notifyHost", sw->notifyHost);
+	return dict;
+}
+bool PyDictToSwitchRule(PyObject *dict, PRSwitchRule *sw)
+{
+	DICT_GET_STRING_INT("notifyHost", sw->notifyHost);
+	return true;
+}
+
+static PyObject *
+PinPROC_driver_get_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number;
+	static char *kwlist[] = {"number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &number))
+	{
+		return NULL;
+	}
+	
+	PRResult res;
+	PRDriverState driver;
+	res = PRDriverGetState(self->handle, number, &driver);
+	if (res == kPRSuccess)
+	{
+		return PyDictFromDriverState(&driver);
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error getting driver state");
+		return NULL;
+	}
+}
+
+static PyObject *
+PinPROC_driver_update_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	static char *kwlist[] = {"number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &dict))
+	{
+		return NULL;
+	}
+	
+	PRDriverState driver;
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
+
+	if (PRDriverUpdateState(self->handle, &driver) == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error getting driver state");
+		return NULL;
+	}
+}
+
+
+static PyObject *
+PinPROC_switch_get_states(pinproc_PinPROCObject *self, PyObject *args)
+{
+	const int numSwitches = kPRSwitchPhysicalLast + 1;
+	PyObject *list = PyList_New(numSwitches);
+	PREventType procSwitchStates[numSwitches];
+    // Get all of the switch states from the P-ROC.
+    if (PRSwitchGetStates(self->handle, procSwitchStates, numSwitches) == kPRFailure)
+    {
+		PyErr_SetString(PyExc_IOError, "Error getting driver state");
+		return NULL;
+	}
+	
+	for (int i = 0; i < numSwitches; i++)
+		PyList_SetItem(list, i, Py_BuildValue("i", procSwitchStates[i]));
+    
+	return list;
+}	
+
+
+static PyObject *
+PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number;
+	const char *eventTypeStr = NULL;
+	PyObject *ruleObj = NULL, *linked_driversObj = NULL;
+	static char *kwlist[] = {"number", "event_type", "rule", "linked_drivers", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "isO|O", kwlist, &number, &eventTypeStr, &ruleObj, &linked_driversObj))
+	{
+		return NULL;
+	}
+	
+	PREventType eventType;
+	if (strcmp(eventTypeStr, "closed_debounced") == 0)
+		eventType = kPREventTypeSwitchClosedDebounced;
+	else if (strcmp(eventTypeStr, "open_debounced") == 0)
+		eventType = kPREventTypeSwitchOpenDebounced;
+	else if (strcmp(eventTypeStr, "closed_nondebounced") == 0)
+		eventType = kPREventTypeSwitchClosedNondebounced;
+	else if (strcmp(eventTypeStr, "open_nondebounced") == 0)
+		eventType = kPREventTypeSwitchOpenNondebounced;
+	else
+	{
+		PyErr_SetString(PyExc_ValueError, "event_type is unrecognized; valid values are <closed|open>_[non]debounced");
+		return NULL;
+	}
+	
+	PRSwitchRule rule;
+	if (!PyDictToSwitchRule(ruleObj, &rule))
+		return NULL;
+	
+	PRDriverState *drivers = NULL;
+	int numDrivers = 0;
+	if (linked_driversObj != NULL)
+		numDrivers = (int)PyList_Size(linked_driversObj);
+
+	if (numDrivers > 0)
+	{
+		drivers = (PRDriverState*)malloc(numDrivers * sizeof(PRDriverState));
+		for (int i = 0; i < numDrivers; i++)
+		{
+			if (!PyDictToDriverState(PyList_GetItem(linked_driversObj, i), &drivers[i]))
+			{
+				free(drivers);
+				return NULL;
+			}
+		}
+	}
+
+	if (PRSwitchUpdateRule(self->handle, number, eventType, &rule, drivers, numDrivers) == kPRSuccess)
+	{
+		if (drivers)
+			free(drivers);
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		if (drivers)
+			free(drivers);
+		PyErr_SetString(PyExc_IOError, "Error updatings witch rule");
+		return NULL;
+	}
+}
+
+
+static PyObject *
+PinPROC_watchdog_tickle(pinproc_PinPROCObject *self, PyObject *args)
+{
+	PRDriverWatchdogTickle(self->handle);
+	PRFlushWriteData(self->handle);
+	Py_INCREF(Py_None);
+	return Py_None;
 }
 
 static PyObject *
@@ -158,6 +399,76 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 	return list;
 }
 
+#define kDMDColumns (128)
+#define kDMDRows (32)
+#define drawdot(subFrame) dots[subFrame*(kDMDColumns*kDMDRows/8) + ((row*kDMDColumns+col)/8)] |= 1 << (col % 8)
+
+static PyObject *
+PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
+{
+	PyObject *dotsObj;
+	if (!PyArg_ParseTuple(args, "O", &dotsObj))
+		return NULL;
+	
+	if (PyString_Size(dotsObj) < 4*kDMDColumns*kDMDRows)
+	{
+		fprintf(stderr, "length=%d", (int)PyString_Size(dotsObj));
+		PyErr_SetString(PyExc_ValueError, "Buffer length is incorrect");
+		return NULL;
+	}
+	int i;
+	
+	static bool firstTime = true;
+	if (firstTime)
+	{
+		firstTime = false;
+        // Create the structure that holds the DMD settings
+        PRDMDConfig dmdConfig;
+        memset(&dmdConfig, 0x0, sizeof(dmdConfig));
+        
+        dmdConfig.numRows = kDMDRows;
+        dmdConfig.numColumns = kDMDColumns;
+        dmdConfig.numSubFrames = 4;
+        
+        for (i = 0; i < dmdConfig.numSubFrames; i++)
+        {
+            dmdConfig.rclkLowCycles[i] = 15;
+            dmdConfig.latchHighCycles[i] = 15;
+            dmdConfig.dotclkHalfPeriod[i] = 1;
+        }
+        
+        dmdConfig.deHighCycles[0] = 250;
+        dmdConfig.deHighCycles[1] = 400;
+        dmdConfig.deHighCycles[2] = 180;
+        dmdConfig.deHighCycles[3] = 800;
+        
+        PRDMDUpdateConfig(self->handle, &dmdConfig);
+	}
+	uint32_t *source = (uint32_t *)PyString_AsString(dotsObj);
+	uint8_t dots[4*kDMDColumns*kDMDRows/8];
+	memset(dots, 0, sizeof(dots));
+	for (int row = 0; row < kDMDRows; row++)
+	{
+		for (int col = 0; col < kDMDColumns; col++)
+		{
+			uint32_t dot = source[row*kDMDColumns + col];
+			uint32_t luma = ((dot>>24) & 0xff) + ((dot>>16) & 0xff) + ((dot>>8) & 0xff) + (dot & 0xff);
+            switch (luma/(1020/4)) // for testing
+            {
+                case 0:
+                    break;
+                case 1: drawdot(0); break;
+                case 2: drawdot(0); drawdot(2); break;
+                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
+            }
+		}
+	}
+	PRDMDDraw(self->handle, dots);
+	
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
 // static PyMemberDef PinPROC_members[] = {
 //     // {"first", T_OBJECT_EX, offsetof(Noddy, first), 0,
 //     //  "first name"},
@@ -168,12 +479,36 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 //     {NULL, NULL, NULL, 0, NULL}  /* Sentinel */
 // };
 static PyMethodDef PinPROC_methods[] = {
+    {"dmd_draw", (PyCFunction)PinPROC_dmd_draw, METH_VARARGS,
+     "Fetches recent events from P-ROC."
+    },
     {"driver_pulse", (PyCFunction)PinPROC_driver_pulse, METH_VARARGS | METH_KEYWORDS,
      "Pulses the specified driver"
     },
     {"driver_schedule", (PyCFunction)PinPROC_driver_schedule, METH_VARARGS | METH_KEYWORDS,
      "Schedules the specified driver"
     },
+    {"driver_patter", (PyCFunction)PinPROC_driver_patter, METH_VARARGS | METH_KEYWORDS,
+     "Patters the specified driver"
+    },
+    {"driver_disable", (PyCFunction)PinPROC_driver_disable, METH_VARARGS | METH_KEYWORDS,
+     "Disables the specified driver"
+    },
+    {"driver_get_state", (PyCFunction)PinPROC_driver_get_state, METH_VARARGS | METH_KEYWORDS,
+     "Returns the state of the specified driver"
+    },
+    {"driver_update_state", (PyCFunction)PinPROC_driver_update_state, METH_VARARGS | METH_KEYWORDS,
+     "Sets the state of the specified driver"
+    },
+    {"switch_get_states", (PyCFunction)PinPROC_switch_get_states, METH_VARARGS,
+     "Gets the current state of all of the switches"
+    },
+    {"switch_update_rule", (PyCFunction)PinPROC_switch_update_rule, METH_VARARGS | METH_KEYWORDS,
+     "Sets the state of the specified driver"
+    },
+	{"watchdog_tickle", (PyCFunction)PinPROC_watchdog_tickle, METH_VARARGS, 
+	 "Tickles the watchdog"
+	},
     {"get_events", (PyCFunction)PinPROC_get_events, METH_VARARGS,
      "Fetches recent events from P-ROC."
     },
@@ -237,8 +572,67 @@ pinproc_decode(PyObject *self, PyObject *args, PyObject *kwds)
 	return Py_BuildValue("i", PRDecode(machineType, PyString_AsString(str)));
 }
 
+static PyObject *
+pinproc_driver_state_disable(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	static char *kwlist[] = {"state", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &dict))
+		return NULL;
+	PRDriverState driver;
+	PyDictToDriverState(dict, &driver);
+	PRDriverStateDisable(&driver);
+	return PyDictFromDriverState(&driver);
+}
+
+static PyObject *
+pinproc_driver_state_pulse(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	int ms;
+	static char *kwlist[] = {"state", "milliseconds", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &dict, &ms))
+		return NULL;
+	PRDriverState driver;
+	PyDictToDriverState(dict, &driver);
+	PRDriverStatePulse(&driver, ms);
+	return PyDictFromDriverState(&driver);
+}
+
+static PyObject *
+pinproc_driver_state_schedule(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	int schedule, seconds, now;
+	static char *kwlist[] = {"state", "schedule", "seconds", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &schedule, &seconds, &now))
+		return NULL;
+	PRDriverState driver;
+	PyDictToDriverState(dict, &driver);
+	PRDriverStateSchedule(&driver, schedule, seconds, now);
+	return PyDictFromDriverState(&driver);
+}
+
+static PyObject *
+pinproc_driver_state_patter(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	int milliseconds_on, milliseconds_off, original_on_time;
+	static char *kwlist[] = {"state", "milliseconds_on", "milliseconds_off", "original_on_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &milliseconds_on, &milliseconds_off, &original_on_time))
+		return NULL;
+	PRDriverState driver;
+	PyDictToDriverState(dict, &driver);
+	PRDriverStatePatter(&driver, milliseconds_on, milliseconds_off, original_on_time);
+	return PyDictFromDriverState(&driver);
+}
+
 PyMethodDef methods[] = {
 		{"decode", (PyCFunction)pinproc_decode, METH_VARARGS | METH_KEYWORDS, "Decode a switch, coil, or lamp number."},
+		{"driver_state_disable", (PyCFunction)pinproc_driver_state_disable, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to disable the driver"},
+		{"driver_state_pulse", (PyCFunction)pinproc_driver_state_pulse, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulse the driver"},
+		{"driver_state_schedule", (PyCFunction)pinproc_driver_state_schedule, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to schedule the driver"},
+		{"driver_state_patter", (PyCFunction)pinproc_driver_state_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to patter the driver"},
 		{NULL, NULL, 0, NULL}};
 
 PyMODINIT_FUNC initpinproc()

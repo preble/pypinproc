@@ -3,10 +3,13 @@
 #   python -i pypinproctest.py
 # 
 import pinproc
+import yaml
 
-pr = pinproc.PinPROC('wpc')
+machineType = 'wpc'
+
+pr = pinproc.PinPROC(machineType)
 pr.reset(1)
 
 def pulse(n, t = 20):
 	"""docstring for pulse"""
-	pr.driver_pulse(pinproc.decode(str(n)), t)
+	pr.driver_pulse(pinproc.decode(machineType, str(n)), t)

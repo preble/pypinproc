@@ -5,7 +5,7 @@ module1 = Extension("pinproc",
 					include_dirs = ['../../include'],
 					libraries = ['usb', 'ftdi', 'pinproc'],
 					library_dirs = ['/usr/local/lib', '../../bin'],
-					extra_compile_args = ['-arch', 'i386'], # Note: Force i386... would prefer to not build universal, just current platform...
+					extra_compile_args = ['-arch', 'i386', '-O0', '-g'], # Note: Force i386... would prefer to not build universal, just current platform...
 					extra_link_args = ['-arch', 'i386'],
 					sources = ['pypinproc.cpp'])
 
