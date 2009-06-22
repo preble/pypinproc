@@ -117,10 +117,10 @@ static PyObject *
 PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, cycleSeconds;
-	int schedule;
+	long long schedule;
 	PyObject *now;
 	static char *kwlist[] = {"number", "schedule", "cycle_seconds", "now", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiO", kwlist, &number, &schedule, &cycleSeconds, &now))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iLiO", kwlist, &number, &schedule, &cycleSeconds, &now))
 	{
 		return NULL;
 	}
@@ -366,7 +366,7 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 	{
 		if (drivers)
 			free(drivers);
-		PyErr_SetString(PyExc_IOError, "Error updatings witch rule");
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error updating switch rule");
 		return NULL;
 	}
 }
