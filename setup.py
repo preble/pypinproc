@@ -7,7 +7,7 @@ module1 = Extension("pinproc",
 					library_dirs = ['/usr/local/lib', '../../bin'],
 					extra_compile_args = ['-arch', 'i386', '-O0', '-g'], # Note: Force i386... would prefer to not build universal, just current platform...
 					extra_link_args = ['-arch', 'i386'],
-					sources = ['pypinproc.cpp'])
+					sources = ['pypinproc.cpp', 'dmdutil.cpp'])
 
 setup(name = "pinproc",
       version = "0.1",

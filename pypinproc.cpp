@@ -635,16 +635,22 @@ PyMethodDef methods[] = {
 		{"driver_state_patter", (PyCFunction)pinproc_driver_state_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to patter the driver"},
 		{NULL, NULL, 0, NULL}};
 
+extern PyTypeObject pinproc_DMDBufferType;
+
 PyMODINIT_FUNC initpinproc()
 {
 	//pinproc_PinPROCType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&pinproc_PinPROCType) < 0)
+        return;
+    if (PyType_Ready(&pinproc_DMDBufferType) < 0)
         return;
 	
 	PyObject *m = Py_InitModule("pinproc", methods);
 	
 	Py_INCREF(&pinproc_PinPROCType);
 	PyModule_AddObject(m, "PinPROC", (PyObject*)&pinproc_PinPROCType);
+	Py_INCREF(&pinproc_DMDBufferType);
+	PyModule_AddObject(m, "DMDBuffer", (PyObject*)&pinproc_DMDBufferType);
 }
 
 }
