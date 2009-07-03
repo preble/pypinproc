@@ -1,5 +1,6 @@
 #include <Python.h>
 #include "pinproc.h"
+#include "dmdutil.h"
 
 extern "C" {
 
@@ -406,16 +407,6 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 static PyObject *
 PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 {
-	PyObject *dotsObj;
-	if (!PyArg_ParseTuple(args, "O", &dotsObj))
-		return NULL;
-	
-	if (PyString_Size(dotsObj) < 4*kDMDColumns*kDMDRows)
-	{
-		fprintf(stderr, "length=%d", (int)PyString_Size(dotsObj));
-		PyErr_SetString(PyExc_ValueError, "Buffer length is incorrect");
-		return NULL;
-	}
 	int i;
 	
 	static bool firstTime = true;
@@ -444,25 +435,73 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
         
         PRDMDUpdateConfig(self->handle, &dmdConfig);
 	}
-	uint32_t *source = (uint32_t *)PyString_AsString(dotsObj);
+	
+	
+	PyObject *dotsObj;
+	if (!PyArg_ParseTuple(args, "O", &dotsObj))
+		return NULL;
+	
 	uint8_t dots[4*kDMDColumns*kDMDRows/8];
 	memset(dots, 0, sizeof(dots));
-	for (int row = 0; row < kDMDRows; row++)
+	
+	if (PyString_Check(dotsObj))
 	{
-		for (int col = 0; col < kDMDColumns; col++)
+		const int rgbaSize = 4*kDMDColumns*kDMDRows;
+	
+		if (PyString_Size(dotsObj) != rgbaSize)
 		{
-			uint32_t dot = source[row*kDMDColumns + col];
-			uint32_t luma = ((dot>>24) & 0xff) + ((dot>>16) & 0xff) + ((dot>>8) & 0xff) + (dot & 0xff);
-            switch (luma/(1020/4)) // for testing
-            {
-                case 0:
-                    break;
-                case 1: drawdot(0); break;
-                case 2: drawdot(0); drawdot(2); break;
-                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
-            }
+			fprintf(stderr, "length=%d", (int)PyString_Size(dotsObj));
+			PyErr_SetString(PyExc_ValueError, "Buffer length is incorrect");
+			return NULL;
+		}
+		uint32_t *source = (uint32_t *)PyString_AsString(dotsObj);
+		for (int row = 0; row < kDMDRows; row++)
+		{
+			for (int col = 0; col < kDMDColumns; col++)
+			{
+				uint32_t dot = source[row*kDMDColumns + col];
+				uint32_t luma = ((dot>>24) & 0xff) + ((dot>>16) & 0xff) + ((dot>>8) & 0xff) + (dot & 0xff);
+	            switch (luma/(1020/4)) // for testing
+	            {
+	                case 0:
+	                    break;
+	                case 1: drawdot(0); break;
+	                case 2: drawdot(0); drawdot(2); break;
+	                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
+	            }
+			}
 		}
 	}
+	else
+	{
+		// Assume that it is a DMDBuffer object
+		// TODO: Check that this is a DMDBuffer object!
+		pinproc_DMDBufferObject *buffer = (pinproc_DMDBufferObject *)dotsObj;
+		if (buffer->width != kDMDColumns || buffer->height != kDMDRows)
+		{
+			fprintf(stderr, "w=%d h=%d", buffer->width, buffer->height);
+			PyErr_SetString(PyExc_ValueError, "Buffer dimensions are incorrect");
+			return NULL;
+		}
+		int sum = 0;
+		for (int row = 0; row < kDMDRows; row++)
+		{
+			for (int col = 0; col < kDMDColumns; col++)
+			{
+				char dot = buffer->buffer[row*buffer->width+col];
+				switch (dot)
+	            {
+	                case 0:
+	                    break;
+	                case 1: drawdot(0); break;
+	                case 2: drawdot(0); drawdot(2); break;
+	                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
+	            }
+				sum += dot;
+			}
+		}
+	}	
+	
 	PRDMDDraw(self->handle, dots);
 	
 	Py_INCREF(Py_None);

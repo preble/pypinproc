@@ -73,6 +73,23 @@ DMDBuffer_set_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 	return Py_None;
 }
 static PyObject *
+DMDBuffer_get_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	int x, y;
+	static char *kwlist[] = {"x", "y", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &x, &y))
+	{
+		return NULL;
+	}
+	if (x >= self->width || y >= self->height)
+	{
+		PyErr_SetString(PyExc_ValueError, "X or Y are out of range");
+		return NULL;
+	}
+
+	return Py_BuildValue("i", self->buffer[y * self->width + x]);
+}
+static PyObject *
 DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
 	pinproc_DMDBufferObject *src = self;
@@ -83,7 +100,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	{
 		return NULL;
 	}
-	
+	//fprintf(stderr, "Before: srcw=%d, srch=%d, dstw=%d, dstw=%d, dst_x=%d, dst_y=%d, src_x=%d, src_y=%d, width=%d, height=%d\n", src->width, src->height, dst->width, dst->height, dst_x, dst_y, src_x, src_y, width, height);
 	if (dst_x < 0)
 	{
 		src_x += -dst_x;
@@ -112,6 +129,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	if (src_y + height > src->height) height = src->height - src_y;
 	if (dst_x + width  > dst->width)  width = dst->width - dst_x;
 	if (dst_y + height > dst->height) height = dst->height - dst_y;
+	//fprintf(stderr, "After: srcw=%d, srch=%d, dstw=%d, dstw=%d, dst_x=%d, dst_y=%d, src_x=%d, src_y=%d, width=%d, height=%d\n\n", src->width, src->height, dst->width, dst->height, dst_x, dst_y, src_x, src_y, width, height);
 	
 	for (int y = 0; y < height; y++)
 	{
@@ -130,6 +148,9 @@ PyMethodDef DMDBuffer_methods[] = {
     },
     {"set_data", (PyCFunction)DMDBuffer_set_data, METH_VARARGS|METH_KEYWORDS,
      "Sets the DMD surface to the contents of the given string."
+    },
+    {"get_dot", (PyCFunction)DMDBuffer_get_dot, METH_VARARGS|METH_KEYWORDS,
+     "Returns the value of the given dot."
     },
     {"copy_to_rect", (PyCFunction)DMDBuffer_copy_to_rect, METH_VARARGS|METH_KEYWORDS,
      "Copies a rect from this buffer to the given buffer."
