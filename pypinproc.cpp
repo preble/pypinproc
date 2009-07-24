@@ -402,6 +402,8 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 
 #define kDMDColumns (128)
 #define kDMDRows (32)
+#define kDMDSubFrames (4)
+#define kDMDFrameBuffers (3)
 #define drawdot(subFrame) dots[subFrame*(kDMDColumns*kDMDRows/8) + ((row*kDMDColumns+col)/8)] |= 1 << (col % 8)
 
 static PyObject *
@@ -419,7 +421,10 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
         
         dmdConfig.numRows = kDMDRows;
         dmdConfig.numColumns = kDMDColumns;
-        dmdConfig.numSubFrames = 4;
+        dmdConfig.numSubFrames = kDMDSubFrames;
+        dmdConfig.numFrameBuffers = kDMDFrameBuffers;
+        dmdConfig.autoIncBufferWrPtr = true;
+        dmdConfig.enableFrameEvents = false;
         
         for (i = 0; i < dmdConfig.numSubFrames; i++)
         {
