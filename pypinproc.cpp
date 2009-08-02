@@ -343,6 +343,21 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 	if (linked_driversObj != NULL)
 		numDrivers = (int)PyList_Size(linked_driversObj);
 
+        static bool firstTime = true;
+        if (firstTime)
+        {
+            firstTime = false;
+            PRSwitchConfig switchConfig;
+            switchConfig.clear = false;
+            switchConfig.hostEventsEnable = true;
+            switchConfig.directMatrixScanLoopTime = 2; // milliseconds
+            switchConfig.pulsesBeforeCheckingRX = 10;
+            switchConfig.inactivePulsesAfterBurst = 12;
+            switchConfig.pulsesPerBurst = 6;
+            switchConfig.pulseHalfPeriodTime = 13; // milliseconds
+            PRSwitchUpdateConfig(self->handle, &switchConfig);
+        }
+
 	if (numDrivers > 0)
 	{
 		drivers = (PRDriverState*)malloc(numDrivers * sizeof(PRDriverState));
