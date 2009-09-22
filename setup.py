@@ -1,3 +1,5 @@
+# To run pyprocgame under Snow Leopard when libs are compiled 32-bit: export VERSIONER_PYTHON_PREFER_32_BIT=yes
+
 # From: http://superjared.com/entry/anatomy-python-c-module/
 from distutils.core import setup, Extension
 import os
@@ -13,7 +15,7 @@ if uname[0] == 'Darwin': # Assuming that Darwin is our only platform with i386 a
 module1 = Extension("pinproc",
 					include_dirs = ['../../include'],
 					libraries = ['usb', 'ftdi', 'pinproc'],
-					library_dirs = ['/usr/local/lib', '../../build'],
+					library_dirs = ['/usr/local/lib', '../../bin'],
 					extra_compile_args = extra_compile_args,
 					extra_link_args = extra_link_args,
 					sources = ['pypinproc.cpp', 'dmdutil.cpp'])
