@@ -39,8 +39,10 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 {
 	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
 		return kPRMachineWPC;
-	else if (strcmp(PyString_AsString(machineTypeObj), "stern") == 0)
-		return  kPRMachineStern;
+	else if (strcmp(PyString_AsString(machineTypeObj), "sternSAM") == 0)
+		return  kPRMachineSternSAM;
+	else if (strcmp(PyString_AsString(machineTypeObj), "sternWhitestar") == 0)
+		return  kPRMachineSternWhitestar;
 	return kPRMachineInvalid;
 }
 
