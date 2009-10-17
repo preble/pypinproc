@@ -39,10 +39,14 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 {
 	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
 		return kPRMachineWPC;
+	else if (strcmp(PyString_AsString(machineTypeObj), "wpc95") == 0)
+		return kPRMachineWPC95;
 	else if (strcmp(PyString_AsString(machineTypeObj), "sternSAM") == 0)
 		return  kPRMachineSternSAM;
 	else if (strcmp(PyString_AsString(machineTypeObj), "sternWhitestar") == 0)
 		return  kPRMachineSternWhitestar;
+	else if (strcmp(PyString_AsString(machineTypeObj), "custom") == 0)
+		return kPRMachineCustom;
 	return kPRMachineInvalid;
 }
 
@@ -58,7 +62,7 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
 	if (machineType == kPRMachineInvalid)
 	{
-		PyErr_SetString(PyExc_ValueError, "Unknown machine type.  Expecting 'wpc' or 'stern'.");
+		PyErr_SetString(PyExc_ValueError, "Unknown machine type.  Expecting wpc, wpc95, sternSAM, sternWhitestar, or custom.");
 		return -1;
 	}
 	//PRLogSetLevel(kPRLogVerbose);
