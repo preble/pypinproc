@@ -73,6 +73,11 @@ DMDBuffer_set_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 	return Py_None;
 }
 static PyObject *
+DMDBuffer_get_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	return PyString_FromStringAndSize(self->buffer, self->width * self->height);
+}
+static PyObject *
 DMDBuffer_get_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
 	int x, y;
@@ -88,6 +93,26 @@ DMDBuffer_get_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	return Py_BuildValue("i", self->buffer[y * self->width + x]);
+}
+static PyObject *
+DMDBuffer_set_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	int x, y, value;
+	static char *kwlist[] = {"x", "y", "value", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &x, &y, &value))
+	{
+		return NULL;
+	}
+	if (x >= self->width || y >= self->height)
+	{
+		PyErr_SetString(PyExc_ValueError, "X or Y are out of range");
+		return NULL;
+	}
+	
+	self->buffer[y * self->width + x] = (char)value;
+
+	Py_INCREF(Py_None);
+	return Py_None;
 }
 static PyObject *
 DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
@@ -149,8 +174,14 @@ PyMethodDef DMDBuffer_methods[] = {
     {"set_data", (PyCFunction)DMDBuffer_set_data, METH_VARARGS|METH_KEYWORDS,
      "Sets the DMD surface to the contents of the given string."
     },
+	{"get_data", (PyCFunction)DMDBuffer_get_data, METH_VARARGS|METH_KEYWORDS,
+     "Gets the dots of the DMD surface in string format."
+    },
     {"get_dot", (PyCFunction)DMDBuffer_get_dot, METH_VARARGS|METH_KEYWORDS,
      "Returns the value of the given dot."
+    },
+    {"set_dot", (PyCFunction)DMDBuffer_set_dot, METH_VARARGS|METH_KEYWORDS,
+     "Assigns the value of the given dot."
     },
     {"copy_to_rect", (PyCFunction)DMDBuffer_copy_to_rect, METH_VARARGS|METH_KEYWORDS,
      "Copies a rect from this buffer to the given buffer."
