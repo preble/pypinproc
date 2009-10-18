@@ -436,16 +436,17 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	if (firstTime)
 	{
 		firstTime = false;
+		printf("hi\n");
         // Create the structure that holds the DMD settings
         PRDMDConfig dmdConfig;
         memset(&dmdConfig, 0x0, sizeof(dmdConfig));
         
+        dmdConfig.enableFrameEvents = true;
         dmdConfig.numRows = kDMDRows;
         dmdConfig.numColumns = kDMDColumns;
         dmdConfig.numSubFrames = kDMDSubFrames;
         dmdConfig.numFrameBuffers = kDMDFrameBuffers;
         dmdConfig.autoIncBufferWrPtr = true;
-        dmdConfig.enableFrameEvents = true;
         
         for (i = 0; i < dmdConfig.numSubFrames; i++)
         {
