@@ -445,7 +445,7 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
         dmdConfig.numSubFrames = kDMDSubFrames;
         dmdConfig.numFrameBuffers = kDMDFrameBuffers;
         dmdConfig.autoIncBufferWrPtr = true;
-        dmdConfig.enableFrameEvents = false;
+        dmdConfig.enableFrameEvents = true;
         
         for (i = 0; i < dmdConfig.numSubFrames; i++)
         {
