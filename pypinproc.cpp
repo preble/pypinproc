@@ -436,7 +436,6 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	if (firstTime)
 	{
 		firstTime = false;
-		printf("hi\n");
         // Create the structure that holds the DMD settings
         PRDMDConfig dmdConfig;
         memset(&dmdConfig, 0x0, sizeof(dmdConfig));
