@@ -115,6 +115,24 @@ DMDBuffer_set_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 	return Py_None;
 }
 static PyObject *
+DMDBuffer_fill_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	int x0, y0, width, height, value;
+	static char *kwlist[] = {"x", "y", "width", "height", "value", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiii", kwlist, &x0, &y0, &width, &height, &value))
+	{
+		return NULL;
+	}
+	
+	for (int x = x0; x < x0 + width; x++)
+		for (int y = y0; y < y0 + height; y++)
+			if (x >= 0 && x < self->width && y >= 0 && y < self->height)
+				self->buffer[y * self->width + x] = (char)value;
+	
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+static PyObject *
 DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
 	pinproc_DMDBufferObject *src = self;
@@ -182,6 +200,9 @@ PyMethodDef DMDBuffer_methods[] = {
     },
     {"set_dot", (PyCFunction)DMDBuffer_set_dot, METH_VARARGS|METH_KEYWORDS,
      "Assigns the value of the given dot."
+    },
+    {"fill_rect", (PyCFunction)DMDBuffer_fill_rect, METH_VARARGS|METH_KEYWORDS,
+     "Fills a rectangle with the given dot value."
     },
     {"copy_to_rect", (PyCFunction)DMDBuffer_copy_to_rect, METH_VARARGS|METH_KEYWORDS,
      "Copies a rect from this buffer to the given buffer."
