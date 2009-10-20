@@ -168,6 +168,12 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 		height -= -src_y;
 		src_y = 0;
 	}
+	if ((dst_x >= dst->width) || (dst_y >= dst->height) || (src_x >= src->width) || (src_y >= src->height))
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	
 	if (src_x + width  > src->width)  width = src->width - src_x;
 	if (src_y + height > src->height) height = src->height - src_y;
 	if (dst_x + width  > dst->width)  width = dst->width - dst_x;
