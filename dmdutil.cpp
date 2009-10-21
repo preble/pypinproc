@@ -132,6 +132,8 @@ DMDBuffer_fill_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwd
 	Py_INCREF(Py_None);
 	return Py_None;
 }
+#define DEBUG_COPY_TO_RECT(statement)
+//#define DEBUG_COPY_TO_RECT(statement) statement
 static PyObject *
 DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
@@ -143,32 +145,36 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	{
 		return NULL;
 	}
-	//fprintf(stderr, "Before: srcw=%d, srch=%d, dstw=%d, dstw=%d, dst_x=%d, dst_y=%d, src_x=%d, src_y=%d, width=%d, height=%d\n", src->width, src->height, dst->width, dst->height, dst_x, dst_y, src_x, src_y, width, height);
+	DEBUG_COPY_TO_RECT(fprintf(stderr, "Before: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	if (dst_x < 0)
 	{
 		src_x += -dst_x;
 		width -= -dst_x;
 		dst_x = 0;
+		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	}
 	if (dst_y < 0)
 	{
 		src_y += -dst_y;
 		height -= -dst_y;
 		dst_y = 0;
+		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	}
 	if (src_x < 0)
 	{
 		dst_x += -src_x;
 		width -= -src_x;
 		src_x = 0;
+		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	}
 	if (src_y < 0)
 	{
 		dst_y += -src_y;
 		height -= -src_y;
 		src_y = 0;
+		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	}
-	if ((dst_x >= dst->width) || (dst_y >= dst->height) || (src_x >= src->width) || (src_y >= src->height))
+	if ((dst_x >= dst->width) || (dst_y >= dst->height) || (src_x >= src->width) || (src_y >= src->height) || (width < 0) || (height < 0))
 	{
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -178,7 +184,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	if (src_y + height > src->height) height = src->height - src_y;
 	if (dst_x + width  > dst->width)  width = dst->width - dst_x;
 	if (dst_y + height > dst->height) height = dst->height - dst_y;
-	//fprintf(stderr, "After: srcw=%d, srch=%d, dstw=%d, dstw=%d, dst_x=%d, dst_y=%d, src_x=%d, src_y=%d, width=%d, height=%d\n\n", src->width, src->height, dst->width, dst->height, dst_x, dst_y, src_x, src_y, width, height);
+	DEBUG_COPY_TO_RECT(fprintf(stderr, " After: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	
 	for (int y = 0; y < height; y++)
 	{
