@@ -4,6 +4,8 @@
 
 extern "C" {
 
+static PRMachineType g_machineType;
+
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
@@ -73,7 +75,11 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText());
 		return -1;
 	}
-	PRDriverLoadMachineTypeDefaults(self->handle, machineType);
+
+	//if (machineType != kPRMachineCustom)
+	//{
+	//	PRDriverLoadMachineTypeDefaults(self->handle, machineType);
+	//}
 
     return 0;
 }
@@ -349,12 +355,17 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 	if (linked_driversObj != NULL)
 		numDrivers = (int)PyList_Size(linked_driversObj);
 
+
+	bool use_columns_8_9;
+	use_columns_8_9 =  g_machineType == kPRMachineWPC || g_machineType == kPRMachineWPC95;
         static bool firstTime = true;
         if (firstTime)
         {
             firstTime = false;
             PRSwitchConfig switchConfig;
             switchConfig.clear = false;
+            switchConfig.use_column_8 = use_columns_8_9;
+            switchConfig.use_column_9 = use_columns_8_9;
             switchConfig.hostEventsEnable = true;
             switchConfig.directMatrixScanLoopTime = 2; // milliseconds
             switchConfig.pulsesBeforeCheckingRX = 10;
@@ -625,7 +636,6 @@ static PyTypeObject pinproc_PinPROCType = {
     PinPROC_new,                 /* tp_new */
 };
 
-
 static PyObject *
 pinproc_decode(PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -634,6 +644,7 @@ pinproc_decode(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &machineTypeObj, &str))
 		return NULL;
 	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
+	g_machineType = machineType;
 	return Py_BuildValue("i", PRDecode(machineType, PyString_AsString(str)));
 }
 
