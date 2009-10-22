@@ -357,7 +357,7 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 
 
 	bool use_columns_8_9;
-	use_columns_8_9 =  g_machineType == kPRMachineWPC || g_machineType == kPRMachineWPC95;
+	use_columns_8_9 =  g_machineType == kPRMachineWPC;
         static bool firstTime = true;
         if (firstTime)
         {
