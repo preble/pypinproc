@@ -356,16 +356,16 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 		numDrivers = (int)PyList_Size(linked_driversObj);
 
 
-	bool use_columns_8_9;
-	use_columns_8_9 =  g_machineType == kPRMachineWPC;
+	bool use_column_8;
+	use_column_8 =  g_machineType == kPRMachineWPC;
         static bool firstTime = true;
         if (firstTime)
         {
             firstTime = false;
             PRSwitchConfig switchConfig;
             switchConfig.clear = false;
-            switchConfig.use_column_8 = use_columns_8_9;
-            switchConfig.use_column_9 = use_columns_8_9;
+            switchConfig.use_column_8 = use_column_8;
+            switchConfig.use_column_9 = false; // No WPC machines actually use this
             switchConfig.hostEventsEnable = true;
             switchConfig.directMatrixScanLoopTime = 2; // milliseconds
             switchConfig.pulsesBeforeCheckingRX = 10;
