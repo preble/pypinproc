@@ -10,6 +10,7 @@ typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
 	PRHandle handle;
+	PRMachineType machineType; // We save it here because there's no "get machine type" in libpinproc.
 } pinproc_PinPROCObject;
 
 static PyObject *
@@ -61,14 +62,14 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	{
 		return -1;
 	}
-	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
-	if (machineType == kPRMachineInvalid)
+	self->machineType = PyObjToMachineType(machineTypeObj);
+	if (self->machineType == kPRMachineInvalid)
 	{
 		PyErr_SetString(PyExc_ValueError, "Unknown machine type.  Expecting wpc, wpc95, sternSAM, sternWhitestar, or custom.");
 		return -1;
 	}
 	//PRLogSetLevel(kPRLogVerbose);
-	self->handle = PRCreate(machineType);
+	self->handle = PRCreate(self->machineType);
 	
 	if (self->handle == kPRHandleInvalid)
 	{
@@ -76,7 +77,7 @@ PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		return -1;
 	}
 
-	//if (machineType != kPRMachineCustom)
+	//if (self->machineType != kPRMachineCustom)
 	//{
 	//	PRDriverLoadMachineTypeDefaults(self->handle, machineType);
 	//}
@@ -465,10 +466,22 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
             dmdConfig.dotclkHalfPeriod[i] = 1;
         }
         
-        dmdConfig.deHighCycles[0] = 250;
-        dmdConfig.deHighCycles[1] = 400;
-        dmdConfig.deHighCycles[2] = 180;
-        dmdConfig.deHighCycles[3] = 800;
+		if (self->machineType == kPRMachineSternSAM)
+		{
+			// These settings were tuned by Gerry for use on LED displays:
+	        dmdConfig.deHighCycles[0] = 250;
+	        dmdConfig.deHighCycles[1] = 400;
+	        dmdConfig.deHighCycles[2] = 180;
+	        dmdConfig.deHighCycles[3] = 800;
+		}
+		else
+		{
+			// Tuned by Adam to even out the gradient ramp on a plasma DMD:
+	        dmdConfig.deHighCycles[0] = 60;
+	        dmdConfig.deHighCycles[1] = 150;
+	        dmdConfig.deHighCycles[2] = 30;
+	        dmdConfig.deHighCycles[3] = 300;
+		}
         
         PRDMDUpdateConfig(self->handle, &dmdConfig);
 	}
@@ -520,21 +533,34 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 			PyErr_SetString(PyExc_ValueError, "Buffer dimensions are incorrect");
 			return NULL;
 		}
-		int sum = 0;
 		for (int row = 0; row < kDMDRows; row++)
 		{
 			for (int col = 0; col < kDMDColumns; col++)
 			{
 				char dot = buffer->buffer[row*buffer->width+col];
-				switch (dot)
-	            {
-	                case 0:
-	                    break;
-	                case 1: drawdot(0); break;
-	                case 2: drawdot(0); drawdot(2); break;
-	                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
-	            }
-				sum += dot;
+				if (dot == 0)
+					continue;
+				else if (dot < 0x10) // 4-color dot:
+				{
+					switch (dot)
+		            {
+		                case 0:
+		                    break;
+		                case 1: drawdot(0); break;
+		                case 2: drawdot(0); drawdot(2); break;
+		                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
+		            }
+				}
+				else if (dot < 0x20) // 16-color dot: (0x10-0x1F)
+				{
+					dot &= 0x0f;
+					int mappedColors[] = {0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15};
+					dot = mappedColors[dot];
+					if (dot & 0x1) drawdot(0);
+					if (dot & 0x2) drawdot(1);
+					if (dot & 0x4) drawdot(2);
+					if (dot & 0x8) drawdot(3);
+				}
 			}
 		}
 	}	
