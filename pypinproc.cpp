@@ -540,18 +540,7 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 				char dot = buffer->buffer[row*buffer->width+col];
 				if (dot == 0)
 					continue;
-				else if (dot < 0x10) // 4-color dot:
-				{
-					switch (dot)
-		            {
-		                case 0:
-		                    break;
-		                case 1: drawdot(0); break;
-		                case 2: drawdot(0); drawdot(2); break;
-		                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
-		            }
-				}
-				else if (dot < 0x20) // 16-color dot: (0x10-0x1F)
+				else
 				{
 					dot &= 0x0f;
 					int mappedColors[] = {0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15};

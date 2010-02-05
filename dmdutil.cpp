@@ -1,5 +1,12 @@
 #include "dmdutil.h"
 
+#ifndef MIN
+#define	MIN(a,b) (((a)<(b))?(a):(b))
+#endif /* MIN */
+#ifndef MAX
+#define	MAX(a,b) (((a)>(b))?(a):(b))
+#endif	/* MAX */
+
 extern "C" {
 
 static PyObject *
@@ -132,19 +139,11 @@ DMDBuffer_fill_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwd
 	Py_INCREF(Py_None);
 	return Py_None;
 }
+
 #define DEBUG_COPY_TO_RECT(statement)
 //#define DEBUG_COPY_TO_RECT(statement) statement
-static PyObject *
-DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+bool ConstrainToBuffers(pinproc_DMDBufferObject *dst, int &dst_x, int &dst_y, pinproc_DMDBufferObject *src, int &src_x, int &src_y, int &width, int &height)
 {
-	pinproc_DMDBufferObject *src = self;
-	pinproc_DMDBufferObject *dst;
-	int dst_x, dst_y, src_x, src_y, width, height;
-	static char *kwlist[] = {"dst", "dst_x", "dst_y", "src_x", "src_y", "width", "height", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiiiiii", kwlist, &dst, &dst_x, &dst_y, &src_x, &src_y, &width, &height))
-	{
-		return NULL;
-	}
 	DEBUG_COPY_TO_RECT(fprintf(stderr, "Before: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
 	if (dst_x < 0)
 	{
@@ -176,8 +175,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	}
 	if ((dst_x >= dst->width) || (dst_y >= dst->height) || (src_x >= src->width) || (src_y >= src->height) || (width < 0) || (height < 0))
 	{
-		Py_INCREF(Py_None);
-		return Py_None;
+		return false;
 	}
 	
 	if (src_x + width  > src->width)  width = src->width - src_x;
@@ -185,12 +183,65 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	if (dst_x + width  > dst->width)  width = dst->width - dst_x;
 	if (dst_y + height > dst->height) height = dst->height - dst_y;
 	DEBUG_COPY_TO_RECT(fprintf(stderr, " After: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	
-	for (int y = 0; y < height; y++)
+	return true;
+}
+static PyObject *
+DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	pinproc_DMDBufferObject *src = self;
+	pinproc_DMDBufferObject *dst;
+	int dst_x, dst_y, src_x, src_y, width, height;
+	const char *opStr = NULL;
+	static char *kwlist[] = {"dst", "dst_x", "dst_y", "src_x", "src_y", "width", "height", "op", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiiiiii|s", kwlist, &dst, &dst_x, &dst_y, &src_x, &src_y, &width, &height, &opStr))
 	{
-		char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-		char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-		memcpy(dst_ptr, src_ptr, width);
+		return NULL;
+	}
+	
+	bool anything_to_do = ConstrainToBuffers(dst, dst_x, dst_y, src, src_x, src_y, width, height);
+	if (!anything_to_do)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+
+	if (opStr == NULL || strcmp(opStr, "copy") == 0)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
+			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
+			memcpy(dst_ptr, src_ptr, width);
+		}
+	}
+	else if(strcmp(opStr, "add") == 0)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
+			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
+			for (int x = 0; x < width; x++)
+			{
+				dst_ptr[x] = MIN(dst_ptr[x] + src_ptr[x], 0xF);
+			}
+		}
+	}
+	else if(strcmp(opStr, "sub") == 0)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
+			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
+			for (int x = 0; x < width; x++)
+			{
+				dst_ptr[x] = MAX(dst_ptr[x] - src_ptr[x], 0);
+			}
+		}
+	}
+	else
+	{
+		PyErr_SetString(PyExc_ValueError, "Operation type not recognized.");
+		return NULL;
 	}
 	
 	Py_INCREF(Py_None);
