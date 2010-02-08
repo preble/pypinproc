@@ -437,56 +437,80 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 #define kDMDRows (32)
 #define kDMDSubFrames (4)
 #define kDMDFrameBuffers (3)
+
+
+static PyObject *
+PinPROC_dmd_update_config(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int i;
+	PyObject *high_cycles_list = NULL;
+	static char *kwlist[] = {"high_cycles", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &high_cycles_list))
+	{
+		return NULL;
+	}
+	
+	PRDMDConfig dmdConfig;
+	memset(&dmdConfig, 0x0, sizeof(dmdConfig));
+
+	dmdConfig.enableFrameEvents = true;
+	dmdConfig.numRows = kDMDRows;
+	dmdConfig.numColumns = kDMDColumns;
+	dmdConfig.numSubFrames = kDMDSubFrames;
+	dmdConfig.numFrameBuffers = kDMDFrameBuffers;
+	dmdConfig.autoIncBufferWrPtr = true;
+
+	for (i = 0; i < dmdConfig.numSubFrames; i++)
+	{
+		dmdConfig.rclkLowCycles[i] = 15;
+		dmdConfig.latchHighCycles[i] = 15;
+		dmdConfig.dotclkHalfPeriod[i] = 1;
+	}
+	
+	// These settings were tuned by Gerry for use on LED displays:
+	// dmdConfig.deHighCycles[0] = 250;
+	// dmdConfig.deHighCycles[1] = 400;
+	// dmdConfig.deHighCycles[2] = 180;
+	// dmdConfig.deHighCycles[3] = 800;
+	// new timings for 15-temp firmware:
+	dmdConfig.deHighCycles[0] = 120;
+	dmdConfig.deHighCycles[1] = 250;
+	dmdConfig.deHighCycles[2] = 50;
+	dmdConfig.deHighCycles[3] = 500;
+
+	if (high_cycles_list != NULL)
+	{
+		int cycles_len = PySequence_Length(high_cycles_list);
+		if (cycles_len != 4)
+		{
+			PyErr_SetString(PyExc_ValueError, "len(high_cycles) must be 4");
+			return NULL;
+		}
+		for (i = 0; i < 4; i++)
+		{
+			PyObject *item = PySequence_GetItem(high_cycles_list, i);
+			if (PyInt_Check(item) == 0)
+			{
+				PyErr_SetString(PyExc_ValueError, "high_cycles members must be integers");
+				return NULL;
+			}
+			dmdConfig.deHighCycles[i] = PyInt_AsLong(item);
+			fprintf(stderr, "dmdConfig.deHighCycles[%d] = %d\n", i, dmdConfig.deHighCycles[i]);
+		}
+	}
+	
+	PRDMDUpdateConfig(self->handle, &dmdConfig);
+
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
 #define drawdot(subFrame) dots[subFrame*(kDMDColumns*kDMDRows/8) + ((row*kDMDColumns+col)/8)] |= 1 << (col % 8)
 
 static PyObject *
 PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 {
 	int i;
-	
-	static bool firstTime = true;
-	if (firstTime)
-	{
-		firstTime = false;
-        // Create the structure that holds the DMD settings
-        PRDMDConfig dmdConfig;
-        memset(&dmdConfig, 0x0, sizeof(dmdConfig));
-        
-        dmdConfig.enableFrameEvents = true;
-        dmdConfig.numRows = kDMDRows;
-        dmdConfig.numColumns = kDMDColumns;
-        dmdConfig.numSubFrames = kDMDSubFrames;
-        dmdConfig.numFrameBuffers = kDMDFrameBuffers;
-        dmdConfig.autoIncBufferWrPtr = true;
-        
-        for (i = 0; i < dmdConfig.numSubFrames; i++)
-        {
-            dmdConfig.rclkLowCycles[i] = 15;
-            dmdConfig.latchHighCycles[i] = 15;
-            dmdConfig.dotclkHalfPeriod[i] = 1;
-        }
-        
-		if (self->machineType == kPRMachineSternSAM)
-		{
-			// These settings were tuned by Gerry for use on LED displays:
-	        dmdConfig.deHighCycles[0] = 250;
-	        dmdConfig.deHighCycles[1] = 400;
-	        dmdConfig.deHighCycles[2] = 180;
-	        dmdConfig.deHighCycles[3] = 800;
-		}
-		else
-		{
-			// Tuned by Adam to even out the gradient ramp on a plasma DMD:
-	        dmdConfig.deHighCycles[0] = 60;
-	        dmdConfig.deHighCycles[1] = 150;
-	        dmdConfig.deHighCycles[2] = 30;
-	        dmdConfig.deHighCycles[3] = 300;
-		}
-        
-        PRDMDUpdateConfig(self->handle, &dmdConfig);
-	}
-	
-	
 	PyObject *dotsObj;
 	if (!PyArg_ParseTuple(args, "O", &dotsObj))
 		return NULL;
@@ -572,6 +596,9 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 static PyMethodDef PinPROC_methods[] = {
     {"dmd_draw", (PyCFunction)PinPROC_dmd_draw, METH_VARARGS,
      "Fetches recent events from P-ROC."
+    },
+    {"dmd_update_config", (PyCFunction)PinPROC_dmd_update_config, METH_VARARGS | METH_KEYWORDS,
+     "Configures the DMD"
     },
     {"driver_pulse", (PyCFunction)PinPROC_driver_pulse, METH_VARARGS | METH_KEYWORDS,
      "Pulses the specified driver"
