@@ -579,6 +579,7 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	}	
 	
 	PRDMDDraw(self->handle, dots);
+	PRFlushWriteData(self->handle);
 	
 	Py_INCREF(Py_None);
 	return Py_None;
