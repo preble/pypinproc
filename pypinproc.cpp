@@ -11,6 +11,7 @@ typedef struct {
     /* Type-specific fields go here. */
 	PRHandle handle;
 	PRMachineType machineType; // We save it here because there's no "get machine type" in libpinproc.
+	bool dmdConfigured;
 } pinproc_PinPROCObject;
 
 static PyObject *
@@ -21,6 +22,7 @@ PinPROC_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     self = (pinproc_PinPROCObject *)type->tp_alloc(type, 0);
     if (self != NULL) {
 		self->handle = kPRHandleInvalid;
+		self->dmdConfigured = false;
     }
 
     return (PyObject *)self;
@@ -438,6 +440,28 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 #define kDMDSubFrames (4)
 #define kDMDFrameBuffers (3)
 
+void PRDMDConfigPopulateDefaults(PRDMDConfig *dmdConfig)
+{
+	memset(dmdConfig, 0x0, sizeof(PRDMDConfig));
+	dmdConfig->enableFrameEvents = true;
+	dmdConfig->numRows = kDMDRows;
+	dmdConfig->numColumns = kDMDColumns;
+	dmdConfig->numSubFrames = kDMDSubFrames;
+	dmdConfig->numFrameBuffers = kDMDFrameBuffers;
+	dmdConfig->autoIncBufferWrPtr = true;
+
+	for (int i = 0; i < dmdConfig->numSubFrames; i++)
+	{
+		dmdConfig->rclkLowCycles[i] = 15;
+		dmdConfig->latchHighCycles[i] = 15;
+		dmdConfig->dotclkHalfPeriod[i] = 1;
+	}
+	
+	dmdConfig->deHighCycles[0] = 90; //120;
+	dmdConfig->deHighCycles[1] = 250;
+	dmdConfig->deHighCycles[2] = 50;
+	dmdConfig->deHighCycles[3] = 500;
+}
 
 static PyObject *
 PinPROC_dmd_update_config(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
@@ -451,32 +475,7 @@ PinPROC_dmd_update_config(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 	}
 	
 	PRDMDConfig dmdConfig;
-	memset(&dmdConfig, 0x0, sizeof(dmdConfig));
-
-	dmdConfig.enableFrameEvents = true;
-	dmdConfig.numRows = kDMDRows;
-	dmdConfig.numColumns = kDMDColumns;
-	dmdConfig.numSubFrames = kDMDSubFrames;
-	dmdConfig.numFrameBuffers = kDMDFrameBuffers;
-	dmdConfig.autoIncBufferWrPtr = true;
-
-	for (i = 0; i < dmdConfig.numSubFrames; i++)
-	{
-		dmdConfig.rclkLowCycles[i] = 15;
-		dmdConfig.latchHighCycles[i] = 15;
-		dmdConfig.dotclkHalfPeriod[i] = 1;
-	}
-	
-	// These settings were tuned by Gerry for use on LED displays:
-	// dmdConfig.deHighCycles[0] = 250;
-	// dmdConfig.deHighCycles[1] = 400;
-	// dmdConfig.deHighCycles[2] = 180;
-	// dmdConfig.deHighCycles[3] = 800;
-	// new timings for 15-temp firmware:
-	dmdConfig.deHighCycles[0] = 120;
-	dmdConfig.deHighCycles[1] = 250;
-	dmdConfig.deHighCycles[2] = 50;
-	dmdConfig.deHighCycles[3] = 500;
+	PRDMDConfigPopulateDefaults(&dmdConfig);
 
 	if (high_cycles_list != NULL)
 	{
@@ -500,6 +499,7 @@ PinPROC_dmd_update_config(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 	}
 	
 	PRDMDUpdateConfig(self->handle, &dmdConfig);
+	self->dmdConfigured = true;
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -514,6 +514,14 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	PyObject *dotsObj;
 	if (!PyArg_ParseTuple(args, "O", &dotsObj))
 		return NULL;
+	
+	if (!self->dmdConfigured)
+	{
+		PRDMDConfig dmdConfig;
+		PRDMDConfigPopulateDefaults(&dmdConfig);
+		PRDMDUpdateConfig(self->handle, &dmdConfig);
+		self->dmdConfigured = true;
+	}
 	
 	uint8_t dots[4*kDMDColumns*kDMDRows/8];
 	memset(dots, 0, sizeof(dots));
