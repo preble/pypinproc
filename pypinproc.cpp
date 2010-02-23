@@ -355,9 +355,9 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 	
 	PRDriverState *drivers = NULL;
 	int numDrivers = 0;
-	if (linked_driversObj != NULL)
+	if (linked_driversObj != NULL) {
 		numDrivers = (int)PyList_Size(linked_driversObj);
-
+	}
 
 	bool use_column_8;
 	use_column_8 =  g_machineType == kPRMachineWPC;
@@ -405,6 +405,7 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error updating switch rule");
 		return NULL;
 	}
+	PRFlushWriteData(self->handle);
 }
 
 
