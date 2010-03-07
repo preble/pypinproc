@@ -238,6 +238,20 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 			}
 		}
 	}
+	else if(strcmp(opStr, "blacksrc") == 0)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
+			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
+			for (int x = 0; x < width; x++)
+			{
+				// Only write dots into black dots.
+				if ((src_ptr[x] & 0xf) != 0)
+					dst_ptr[x] = (dst_ptr[x] & 0xf0) | (src_ptr[x] & 0xf);
+			}
+		}
+	}
 	else if(strcmp(opStr, "blend") == 0)
 	{
 		for (int y = 0; y < height; y++)
