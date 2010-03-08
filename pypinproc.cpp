@@ -458,10 +458,10 @@ void PRDMDConfigPopulateDefaults(PRDMDConfig *dmdConfig)
 		dmdConfig->dotclkHalfPeriod[i] = 1;
 	}
 	
-	dmdConfig->deHighCycles[0] = 90; //120;
-	dmdConfig->deHighCycles[1] = 250;
+	dmdConfig->deHighCycles[0] = 90;
+	dmdConfig->deHighCycles[1] = 190; //250;
 	dmdConfig->deHighCycles[2] = 50;
-	dmdConfig->deHighCycles[3] = 500;
+	dmdConfig->deHighCycles[3] = 377; // 60fps
 }
 
 static PyObject *
