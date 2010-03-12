@@ -6,12 +6,15 @@ extern "C" {
 
 static PRMachineType g_machineType;
 
+const static int dmdMappingSize = 16;
+
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
 	PRHandle handle;
 	PRMachineType machineType; // We save it here because there's no "get machine type" in libpinproc.
 	bool dmdConfigured;
+	unsigned char dmdMapping[dmdMappingSize];
 } pinproc_PinPROCObject;
 
 static PyObject *
@@ -23,6 +26,10 @@ PinPROC_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (self != NULL) {
 		self->handle = kPRHandleInvalid;
 		self->dmdConfigured = false;
+		for (int i = 0; i < dmdMappingSize; i++)
+		{
+			self->dmdMapping[i] = i;
+		}
     }
 
     return (PyObject *)self;
@@ -506,6 +513,38 @@ PinPROC_dmd_update_config(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 	return Py_None;
 }
 
+static PyObject *
+PinPROC_dmd_set_color_mapping(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int i;
+	PyObject *mapping_list = NULL;
+	static char *kwlist[] = {"mapping", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &mapping_list))
+	{
+		return NULL;
+	}
+	
+	int len = PySequence_Length(mapping_list);
+	if (len != dmdMappingSize)
+	{
+		PyErr_SetString(PyExc_ValueError, "len(mapping) incorrect");
+		return NULL;
+	}
+	for (i = 0; i < dmdMappingSize; i++)
+	{
+		PyObject *item = PySequence_GetItem(mapping_list, i);
+		if (PyInt_Check(item) == 0)
+		{
+			PyErr_SetString(PyExc_ValueError, "mapping members must be integers");
+			return NULL;
+		}
+		self->dmdMapping[i] = PyInt_AsLong(item);
+		fprintf(stderr, "dmdMapping[%d] = %d\n", i, self->dmdMapping[i]);
+	}
+	
+	Py_INCREF(Py_None);
+	return Py_None;
+}
 #define drawdot(subFrame) dots[subFrame*(kDMDColumns*kDMDRows/8) + ((row*kDMDColumns+col)/8)] |= 1 << (col % 8)
 
 static PyObject *
@@ -576,6 +615,7 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 				else
 				{
 					dot &= 0x0f;
+					dot = self->dmdMapping[dot]; // Apply the mapping from dmd_set_color_mapping()
 					int mappedColors[] = {0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15};
 					dot = mappedColors[dot];
 					if (dot & 0x1) drawdot(0);
@@ -606,6 +646,9 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 static PyMethodDef PinPROC_methods[] = {
     {"dmd_draw", (PyCFunction)PinPROC_dmd_draw, METH_VARARGS,
      "Fetches recent events from P-ROC."
+    },
+    {"set_dmd_color_mapping", (PyCFunction)PinPROC_dmd_set_color_mapping, METH_VARARGS | METH_KEYWORDS,
+     "Configures the DMD color mapping"
     },
     {"dmd_update_config", (PyCFunction)PinPROC_dmd_update_config, METH_VARARGS | METH_KEYWORDS,
      "Configures the DMD"
