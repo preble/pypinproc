@@ -13,9 +13,9 @@ if uname[0] == 'Darwin': # Assuming that Darwin is our only platform with i386 a
 	extra_link_args += ['-arch', uname[4]]
 
 module1 = Extension("pinproc",
-					include_dirs = ['../../include'],
+					include_dirs = ['../libpinproc/include'],
 					libraries = ['usb', 'ftdi', 'pinproc'],
-					library_dirs = ['/usr/local/lib', '../../bin'],
+					library_dirs = ['/usr/local/lib', '../libpinproc/bin'],
 					extra_compile_args = extra_compile_args,
 					extra_link_args = extra_link_args,
 					sources = ['pypinproc.cpp', 'dmdutil.cpp'])
