@@ -6,6 +6,8 @@ extern "C" {
 
 static PRMachineType g_machineType;
 
+#define ReturnOnErrorAndSetIOError(res) { if (res != kPRSuccess) { PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); return NULL; } }
+
 const static int dmdMappingSize = 16;
 
 typedef struct {
@@ -123,8 +125,10 @@ PinPROC_driver_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds
 	res = PRDriverPulse(self->handle, number, milliseconds);
 	if (res == kPRSuccess)
 	{
-		PRDriverWatchdogTickle(self->handle);
-		PRFlushWriteData(self->handle);
+		res = PRDriverWatchdogTickle(self->handle);
+		ReturnOnErrorAndSetIOError(res);
+		res = PRFlushWriteData(self->handle);
+		ReturnOnErrorAndSetIOError(res);
 		
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -152,7 +156,8 @@ PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *k
 	res = PRDriverSchedule(self->handle, number, (uint32_t)schedule, cycleSeconds, now == Py_True);
 	if (res == kPRSuccess)
 	{
-		PRFlushWriteData(self->handle);
+		res = PRFlushWriteData(self->handle);
+		ReturnOnErrorAndSetIOError(res);
 		
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -176,7 +181,8 @@ PinPROC_driver_patter(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwd
 	res = PRDriverPatter(self->handle, number, millisOn, millisOff, originalOnTime);
 	if (res == kPRSuccess)
 	{
-		PRFlushWriteData(self->handle);
+		res = PRFlushWriteData(self->handle);
+		ReturnOnErrorAndSetIOError(res);
 		
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -202,8 +208,10 @@ PinPROC_driver_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kw
 	res = PRDriverDisable(self->handle, number);
 	if (res == kPRSuccess)
 	{
-		PRDriverWatchdogTickle(self->handle);
-		PRFlushWriteData(self->handle);
+		res = PRDriverWatchdogTickle(self->handle);
+		ReturnOnErrorAndSetIOError(res);
+		res = PRFlushWriteData(self->handle);
+		ReturnOnErrorAndSetIOError(res);
 		
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -412,15 +420,17 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error updating switch rule");
 		return NULL;
 	}
-	PRFlushWriteData(self->handle);
+	PRResult res = PRFlushWriteData(self->handle);
+	ReturnOnErrorAndSetIOError(res);
 }
-
 
 static PyObject *
 PinPROC_watchdog_tickle(pinproc_PinPROCObject *self, PyObject *args)
 {
+	PRResult res;
 	PRDriverWatchdogTickle(self->handle);
-	PRFlushWriteData(self->handle);
+	res = PRFlushWriteData(self->handle);
+	ReturnOnErrorAndSetIOError(res);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -433,6 +443,11 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 	const int maxEvents = 16;
 	PREvent events[maxEvents];
 	int numEvents = PRGetEvents(self->handle, events, maxEvents);
+	if (numEvents < 0)
+	{
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText());
+		return NULL;
+	}
 	for (int i = 0; i < numEvents; i++)
 	{
 		PyObject *dict = PyDict_New();
@@ -551,6 +566,7 @@ static PyObject *
 PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 {
 	int i;
+	PRResult res;
 	PyObject *dotsObj;
 	if (!PyArg_ParseTuple(args, "O", &dotsObj))
 		return NULL;
@@ -559,7 +575,8 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	{
 		PRDMDConfig dmdConfig;
 		PRDMDConfigPopulateDefaults(&dmdConfig);
-		PRDMDUpdateConfig(self->handle, &dmdConfig);
+		res = PRDMDUpdateConfig(self->handle, &dmdConfig);
+		ReturnOnErrorAndSetIOError(res);
 		self->dmdConfigured = true;
 	}
 	
@@ -627,8 +644,10 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 		}
 	}	
 	
-	PRDMDDraw(self->handle, dots);
-	PRFlushWriteData(self->handle);
+	res = PRDMDDraw(self->handle, dots);
+	ReturnOnErrorAndSetIOError(res);
+	res = PRFlushWriteData(self->handle);
+	ReturnOnErrorAndSetIOError(res);
 	
 	Py_INCREF(Py_None);
 	return Py_None;
