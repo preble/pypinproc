@@ -3,12 +3,13 @@
 # From: http://superjared.com/entry/anatomy-python-c-module/
 from distutils.core import setup, Extension
 import os
+import sys
 
-uname = os.uname()
 
 extra_compile_args = ['-O0', '-g']
 extra_link_args = []
-if uname[0] == 'Darwin': # Assuming that Darwin is our only platform with i386 and ppc binaries, we'll force this to build for the current platform:
+if sys.platform == 'darwin': # Assuming that Darwin is our only platform with i386 and ppc binaries, we'll force this to build for the current platform:
+	uname = os.uname() # This call is only supported on UNIX platforms.
 	extra_compile_args += ['-arch', uname[4]]
 	extra_link_args += ['-arch', uname[4]]
 
