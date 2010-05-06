@@ -495,7 +495,7 @@ PinPROC_aux_send_commands(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 	if (commandsObj != NULL) {
 		numCommands = (int)PyList_Size(commandsObj);
 	}
-	fprintf(stderr, "AuxNumCommands = %d\n", numCommands);
+	//fprintf(stderr, "AuxNumCommands = %d\n", numCommands);
 
 	if (numCommands > 0)
 	{
@@ -508,6 +508,7 @@ PinPROC_aux_send_commands(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 				return NULL;
 			}
 			else {
+/*
 				fprintf(stderr, "\n\nAuxCommand #%d\n", i);
 				fprintf(stderr, "active:%d\n", commands[i].active);
 				fprintf(stderr, "muxEnables:%d\n", commands[i].muxEnables);
@@ -517,6 +518,7 @@ PinPROC_aux_send_commands(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 				fprintf(stderr, "data:%d\n", commands[i].data);
 				fprintf(stderr, "delayTime:%d\n", commands[i].delayTime);
 				fprintf(stderr, "jumpAddr:%d\n", commands[i].jumpAddr);
+*/
 			}
 		}
 	}
@@ -1040,7 +1042,6 @@ PyMethodDef methods[] = {
 		{"driver_state_schedule", (PyCFunction)pinproc_driver_state_schedule, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to schedule the driver"},
 		{"driver_state_patter", (PyCFunction)pinproc_driver_state_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to patter the driver"},
 		{"driver_state_pulsed_patter", (PyCFunction)pinproc_driver_state_pulsed_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulsed-patter the driver"},
-		{"driver_state_pulsed_patter", (PyCFunction)pinproc_driver_state_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulsed-patter the driver"},
 		{"aux_command_output_custom", (PyCFunction)pinproc_aux_command_output_custom, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given aux output command"},
 		{"aux_command_output_primary", (PyCFunction)pinproc_aux_command_output_primary, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given primary aux output command"},
 		{"aux_command_output_secondary", (PyCFunction)pinproc_aux_command_output_secondary, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given secondary aux output command"},
