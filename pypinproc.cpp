@@ -1050,6 +1050,12 @@ PyMODINIT_FUNC initpinproc()
 	PyModule_AddObject(m, "PinPROC", (PyObject*)&pinproc_PinPROCType);
 	Py_INCREF(&pinproc_DMDBufferType);
 	PyModule_AddObject(m, "DMDBuffer", (PyObject*)&pinproc_DMDBufferType);
+	
+    PyModule_AddIntConstant(m, "EventTypeSwitchClosedDebounced", kPREventTypeSwitchClosedDebounced);
+    PyModule_AddIntConstant(m, "EventTypeSwitchOpenDebounced", kPREventTypeSwitchOpenDebounced);
+    PyModule_AddIntConstant(m, "EventTypeSwitchClosedNondebounced", kPREventTypeSwitchClosedNondebounced);
+    PyModule_AddIntConstant(m, "EventTypeSwitchOpenNondebounced", kPREventTypeSwitchOpenNondebounced);
+    PyModule_AddIntConstant(m, "EventTypeDMDFrameDisplayed", kPREventTypeDMDFrameDisplayed);
 }
 
 }
