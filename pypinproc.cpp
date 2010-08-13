@@ -51,7 +51,9 @@ PinPROC_dealloc(PyObject* _self)
 
 PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 {
-	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
+	if (PyInt_Check(machineTypeObj))
+		return (PRMachineType)PyInt_AsLong(machineTypeObj);
+	else if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
 		return kPRMachineWPC;
 	else if (strcmp(PyString_AsString(machineTypeObj), "wpcAlphanumeric") == 0)
 		return kPRMachineWPCAlphanumeric;
@@ -1056,6 +1058,14 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "EventTypeSwitchClosedNondebounced", kPREventTypeSwitchClosedNondebounced);
     PyModule_AddIntConstant(m, "EventTypeSwitchOpenNondebounced", kPREventTypeSwitchOpenNondebounced);
     PyModule_AddIntConstant(m, "EventTypeDMDFrameDisplayed", kPREventTypeDMDFrameDisplayed);
+    PyModule_AddIntConstant(m, "MachineTypeWPC", kPRMachineWPC);
+    PyModule_AddIntConstant(m, "MachineTypeWPCAlphanumeric", kPRMachineWPCAlphanumeric);
+    PyModule_AddIntConstant(m, "MachineTypeWPC95", kPRMachineWPC95);
+    PyModule_AddIntConstant(m, "MachineTypeSternSAM", kPRMachineSternSAM);
+    PyModule_AddIntConstant(m, "MachineTypeSternWhitestar", kPRMachineSternWhitestar);
+    PyModule_AddIntConstant(m, "MachineTypeCustom", kPRMachineCustom);
+    PyModule_AddIntConstant(m, "MachineTypeInvalid", kPRMachineInvalid);
+    
 }
 
 }
