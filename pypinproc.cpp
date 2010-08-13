@@ -72,7 +72,7 @@ static int
 PinPROC_init(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *machineTypeObj = NULL;
-	static char *kwlist[] = {"machineType", NULL};
+	static char *kwlist[] = {"machine_type", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &machineTypeObj))
 	{
 		return -1;
