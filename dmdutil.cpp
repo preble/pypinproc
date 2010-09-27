@@ -252,7 +252,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 			}
 		}
 	}
-	else if(strcmp(opStr, "blend") == 0)
+	else if(strcmp(opStr, "alpha") == 0)
 	{
 		for (int y = 0; y < height; y++)
 		{
@@ -260,11 +260,12 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
 			for (int x = 0; x < width; x++)
 			{
-				char dot = dst_ptr[x] & 0xf;
-				char a = (src_ptr[x] & 0xf0) >> 4;
-				if (a != 0xf) // if it's not fully transparent
-					dot += 15 * (src_ptr[x] & 0xf) / a;
-				dst_ptr[x] = (dst_ptr[x] & 0xf0) | (dot & 0xf);
+				char dst_dot = dst_ptr[x] & 0xf;
+				char src_dot = src_ptr[x] & 0xf;
+				char src_a = (src_ptr[x]  >> 4) & 0xf;
+				char dot = src_a;
+				dot = ((src_dot * (src_a)) + (dst_dot * (0x10 - src_a))) >> 4;
+				dst_ptr[x] = (dst_ptr[x] & 0xf0) | (dot & 0xf); // Maintain destination alpha
 			}
 		}
 	}
