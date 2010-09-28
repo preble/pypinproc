@@ -264,7 +264,7 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 				char src_dot = src_ptr[x] & 0xf;
 				char src_a = (src_ptr[x]  >> 4) & 0xf;
 				char dot = src_a;
-				dot = ((src_dot * (src_a)) + (dst_dot * (0x10 - src_a))) >> 4;
+				dot = ((src_dot * (src_a)) + (dst_dot * (0xf - src_a))) >> 4;
 				dst_ptr[x] = (dst_ptr[x] & 0xf0) | (dot & 0xf); // Maintain destination alpha
 			}
 		}
