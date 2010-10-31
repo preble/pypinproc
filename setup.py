@@ -8,10 +8,12 @@ import sys
 
 extra_compile_args = ['-O0', '-g']
 extra_link_args = []
-if sys.platform == 'darwin': # Assuming that Darwin is our only platform with i386 and ppc binaries, we'll force this to build for the current platform:
-	uname = os.uname() # This call is only supported on UNIX platforms.
-	extra_compile_args += ['-arch', uname[4]]
-	extra_link_args += ['-arch', uname[4]]
+
+# To use the ARCH flag simply:
+#   ARCH=x86_64 python setup.py build
+if 'ARCH' in os.environ:
+	extra_compile_args += ['-arch', os.environ['ARCH']]
+	extra_link_args += ['-arch', os.environ['ARCH']]
 
 module1 = Extension("pinproc",
 					include_dirs = ['../libpinproc/include'],
