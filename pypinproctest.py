@@ -5,11 +5,13 @@
 import pinproc
 import yaml
 
-machineType = 'wpc'
+machine_type = pinproc.MachineTypeWPC
 
-pr = pinproc.PinPROC(machineType)
+pr = pinproc.PinPROC(machine_type)
 pr.reset(1)
 
 def pulse(n, t = 20):
 	"""docstring for pulse"""
-	pr.driver_pulse(pinproc.decode(machineType, str(n)), t)
+	pr.driver_pulse(pinproc.decode(machine_type, str(n)), t)
+
+del pr
