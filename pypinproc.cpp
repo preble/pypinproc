@@ -116,6 +116,30 @@ PinPROC_reset(pinproc_PinPROCObject *self, PyObject *args)
 }
 
 static PyObject *
+PinPROC_driver_group_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number;
+	static char *kwlist[] = {"number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &number))
+	{
+		return NULL;
+	}
+	
+	PRResult res;
+	res = PRDriverGroupDisable(self->handle, number);
+	if (res == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error disabling driver group");
+		return NULL;
+	}
+}
+
+static PyObject *
 PinPROC_driver_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, milliseconds;
@@ -773,6 +797,9 @@ static PyMethodDef PinPROC_methods[] = {
     },
     {"dmd_update_config", (PyCFunction)PinPROC_dmd_update_config, METH_VARARGS | METH_KEYWORDS,
      "Configures the DMD"
+    },
+    {"driver_group_disable", (PyCFunction)PinPROC_driver_group_disable, METH_VARARGS | METH_KEYWORDS,
+     "Disables the specified driver group"
     },
     {"driver_pulse", (PyCFunction)PinPROC_driver_pulse, METH_VARARGS | METH_KEYWORDS,
      "Pulses the specified driver"
