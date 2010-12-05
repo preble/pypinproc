@@ -972,29 +972,29 @@ pinproc_driver_state_pulsed_patter(PyObject *self, PyObject *args, PyObject *kwd
 static PyObject *
 pinproc_aux_command_output_custom(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	int data, extra_data, enables, mux_enables;
-	static char *kwlist[] = {"data", "extra_data", "enables", "mux_enables", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii", kwlist, &data, &extra_data, &enables, &mux_enables))
+	int data, extra_data, enables, mux_enables, delay_time;
+	static char *kwlist[] = {"data", "extra_data", "enables", "mux_enables", "delay_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiii", kwlist, &data, &extra_data, &enables, &mux_enables, &delay_time))
 		return NULL;
 	PRDriverAuxCommand auxCommand;
-	PRDriverAuxPrepareOutput(&auxCommand, data, extra_data, enables, mux_enables);
+	PRDriverAuxPrepareOutput(&auxCommand, data, extra_data, enables, mux_enables, delay_time);
 	return PyDictFromAuxCommand(&auxCommand);
 }
 
 static PyObject *
 pinproc_aux_command_output_primary(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	int data, extra_data;
-	static char *kwlist[] = {"data", "extra_data", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &data, &extra_data))
+	int data, extra_data, delay_time;
+	static char *kwlist[] = {"data", "extra_data", "delay_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &data, &extra_data, &delay_time))
 		return NULL;
 	PRDriverAuxCommand auxCommand;
 	if (g_machineType == kPRMachineWPCAlphanumeric) { 
-		PRDriverAuxPrepareOutput(&auxCommand, data, extra_data, 8, 0);
+		PRDriverAuxPrepareOutput(&auxCommand, data, extra_data, 8, 0, delay_time);
 	}
 	else if (g_machineType == kPRMachineSternWhitestar ||
                  g_machineType == kPRMachineSternSAM) {
-		PRDriverAuxPrepareOutput(&auxCommand, data, 0, 6, 1);
+		PRDriverAuxPrepareOutput(&auxCommand, data, 0, 6, 1, delay_time);
 	}
 	else return NULL;
 	return PyDictFromAuxCommand(&auxCommand);
@@ -1003,14 +1003,14 @@ pinproc_aux_command_output_primary(PyObject *self, PyObject *args, PyObject *kwd
 static PyObject *
 pinproc_aux_command_output_secondary(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	int data, extra_data;
-	static char *kwlist[] = {"data", "extra_data", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &data, &extra_data))
+	int data, extra_data, delay_time;
+	static char *kwlist[] = {"data", "extra_data", "delay_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &data, &extra_data, &delay_time))
 		return NULL;
 	PRDriverAuxCommand auxCommand;
 	if (g_machineType == kPRMachineSternWhitestar ||
                  g_machineType == kPRMachineSternSAM) {
-		PRDriverAuxPrepareOutput(&auxCommand, data, 0, 11, 1);
+		PRDriverAuxPrepareOutput(&auxCommand, data, 0, 11, 1, delay_time);
 	}
 	else return NULL;
 	return PyDictFromAuxCommand(&auxCommand);
