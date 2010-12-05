@@ -908,7 +908,8 @@ pinproc_driver_state_disable(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &dict))
 		return NULL;
 	PRDriverState driver;
-	PyDictToDriverState(dict, &driver);
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 	PRDriverStateDisable(&driver);
 	return PyDictFromDriverState(&driver);
 }
@@ -922,7 +923,8 @@ pinproc_driver_state_pulse(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oi", kwlist, &dict, &ms))
 		return NULL;
 	PRDriverState driver;
-	PyDictToDriverState(dict, &driver);
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 	PRDriverStatePulse(&driver, ms);
 	return PyDictFromDriverState(&driver);
 }
@@ -936,7 +938,8 @@ pinproc_driver_state_schedule(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &schedule, &seconds, &now))
 		return NULL;
 	PRDriverState driver;
-	PyDictToDriverState(dict, &driver);
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 	PRDriverStateSchedule(&driver, schedule, seconds, now);
 	return PyDictFromDriverState(&driver);
 }
@@ -950,7 +953,8 @@ pinproc_driver_state_patter(PyObject *self, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &milliseconds_on, &milliseconds_off, &original_on_time))
 		return NULL;
 	PRDriverState driver;
-	PyDictToDriverState(dict, &driver);
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 	PRDriverStatePatter(&driver, milliseconds_on, milliseconds_off, original_on_time);
 	return PyDictFromDriverState(&driver);
 }
@@ -964,7 +968,8 @@ pinproc_driver_state_pulsed_patter(PyObject *self, PyObject *args, PyObject *kwd
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &milliseconds_on, &milliseconds_off, &milliseconds_patter_time))
 		return NULL;
 	PRDriverState driver;
-	PyDictToDriverState(dict, &driver);
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 	PRDriverStatePulsedPatter(&driver, milliseconds_on, milliseconds_off, milliseconds_patter_time);
 	return PyDictFromDriverState(&driver);
 }
