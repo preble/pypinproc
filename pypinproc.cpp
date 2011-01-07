@@ -899,6 +899,17 @@ pinproc_decode(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+pinproc_normalize_machine_type(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *machineTypeObj;
+	static char *kwlist[] = {"machine_type", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &machineTypeObj))
+		return NULL;
+	PRMachineType machineType = PyObjToMachineType(machineTypeObj);
+	return Py_BuildValue("i", machineType);
+}
+
+static PyObject *
 pinproc_driver_state_disable(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *dict;
@@ -1053,6 +1064,7 @@ pinproc_aux_command_disable(PyObject *self, PyObject *args, PyObject *kwds)
 
 PyMethodDef methods[] = {
 		{"decode", (PyCFunction)pinproc_decode, METH_VARARGS | METH_KEYWORDS, "Decode a switch, coil, or lamp number."},
+		{"normalize_machine_type", (PyCFunction)pinproc_normalize_machine_type, METH_VARARGS | METH_KEYWORDS, "Converts a string to an integer style machine type.  Integers pass through."},
 		{"driver_state_disable", (PyCFunction)pinproc_driver_state_disable, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to disable the driver"},
 		{"driver_state_pulse", (PyCFunction)pinproc_driver_state_pulse, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulse the driver"},
 		{"driver_state_schedule", (PyCFunction)pinproc_driver_state_schedule, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to schedule the driver"},
