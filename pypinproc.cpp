@@ -487,7 +487,6 @@ static PyObject *
 PinPROC_aux_send_commands(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int address;
-	const char *eventTypeStr = NULL;
 	PyObject *commandsObj = NULL;
 	static char *kwlist[] = {"address", "aux_commands", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iO", kwlist, &address, &commandsObj))
@@ -693,7 +692,6 @@ PinPROC_dmd_set_color_mapping(pinproc_PinPROCObject *self, PyObject *args, PyObj
 static PyObject *
 PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 {
-	int i;
 	PRResult res;
 	PyObject *dotsObj;
 	if (!PyArg_ParseTuple(args, "O", &dotsObj))
@@ -760,9 +758,9 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 				else
 				{
 					dot &= 0x0f;
-					dot = self->dmdMapping[dot]; // Apply the mapping from dmd_set_color_mapping()
+					dot = self->dmdMapping[(int)dot]; // Apply the mapping from dmd_set_color_mapping()
 					int mappedColors[] = {0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15};
-					dot = mappedColors[dot];
+					dot = mappedColors[(int)dot];
 					if (dot & 0x1) drawdot(0);
 					if (dot & 0x2) drawdot(1);
 					if (dot & 0x4) drawdot(2);

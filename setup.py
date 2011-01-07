@@ -7,6 +7,7 @@ import sys
 
 
 extra_compile_args = ['-O0', '-g']
+extra_compile_args.append('-Wno-write-strings') # fix "warning: deprecated conversion from string constant to 'char*'"
 extra_link_args = []
 
 # To use the ARCH flag simply:
