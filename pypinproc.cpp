@@ -942,9 +942,10 @@ static PyObject *
 pinproc_driver_state_schedule(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *dict;
-	int schedule, seconds, now;
+	long long schedule;
+	int seconds, now;
 	static char *kwlist[] = {"state", "schedule", "seconds", "now", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &schedule, &seconds, &now))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OLii", kwlist, &dict, &schedule, &seconds, &now))
 		return NULL;
 	PRDriverState driver;
 	if (!PyDictToDriverState(dict, &driver))
