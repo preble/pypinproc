@@ -85,6 +85,19 @@ DMDBuffer_get_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 	return PyString_FromStringAndSize(self->buffer, self->width * self->height);
 }
 static PyObject *
+DMDBuffer_get_data_mult(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
+{
+	char *scratchBuffer = (char *)malloc(self->width * self->height);
+	for (int i = 0; i < self->width * self->height; i++)
+	{
+		unsigned char c = (self->buffer[i] + 1) * 16 - 1;
+		scratchBuffer[i] = c > 15 ? c : 0;
+	}
+	PyObject *output = PyString_FromStringAndSize(scratchBuffer, self->width * self->height);
+	free(scratchBuffer);
+	return output;
+}
+static PyObject *
 DMDBuffer_get_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
 	int x, y;
@@ -288,6 +301,9 @@ PyMethodDef DMDBuffer_methods[] = {
     },
 	{"get_data", (PyCFunction)DMDBuffer_get_data, METH_VARARGS|METH_KEYWORDS,
      "Gets the dots of the DMD surface in string format."
+    },
+	{"get_data_mult", (PyCFunction)DMDBuffer_get_data_mult, METH_VARARGS|METH_KEYWORDS,
+     "Gets the dots of the DMD surface in string format, values scaled to 0-240."
     },
     {"get_dot", (PyCFunction)DMDBuffer_get_dot, METH_VARARGS|METH_KEYWORDS,
      "Returns the value of the given dot."
