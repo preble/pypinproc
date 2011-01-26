@@ -53,7 +53,22 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 {
 	if (PyInt_Check(machineTypeObj))
 		return (PRMachineType)PyInt_AsLong(machineTypeObj);
-	else if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
+	
+	if (!PyString_Check(machineTypeObj))
+		return kPRMachineInvalid;
+
+	PyObject *intObject = PyInt_FromString(PyString_AsString(machineTypeObj), NULL, 0);
+	if (intObject)
+	{
+		PRMachineType mt = (PRMachineType)PyInt_AsLong(intObject);
+		Py_DECREF(intObject);
+		return mt;
+	}
+	// If an exception occurred in PyInt_FromString(), clear it:
+	if (PyErr_Occurred())
+		PyErr_Clear();
+	
+	if (strcmp(PyString_AsString(machineTypeObj), "wpc") == 0)
 		return kPRMachineWPC;
 	else if (strcmp(PyString_AsString(machineTypeObj), "wpcAlphanumeric") == 0)
 		return kPRMachineWPCAlphanumeric;
@@ -65,6 +80,7 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 		return  kPRMachineSternWhitestar;
 	else if (strcmp(PyString_AsString(machineTypeObj), "custom") == 0)
 		return kPRMachineCustom;
+	
 	return kPRMachineInvalid;
 }
 
