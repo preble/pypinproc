@@ -9,10 +9,15 @@
 
 extern "C" {
 
+void InitializeAlphaMap();
+char *gAlphaMap = NULL;
+
 static PyObject *
 DMDBuffer_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     pinproc_DMDBufferObject *self;
+
+	InitializeAlphaMap();
 
     self = (pinproc_DMDBufferObject *)type->tp_alloc(type, 0);
     if (self != NULL) {
@@ -273,12 +278,30 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
 			for (int x = 0; x < width; x++)
 			{
-				char dst_dot = dst_ptr[x] & 0xf;
-				char src_dot = src_ptr[x] & 0xf;
-				char src_a = (src_ptr[x]  >> 4) & 0xf;
-				char dot = src_a;
-				dot = ((src_dot * (src_a)) + (dst_dot * (0xf - src_a))) >> 4;
-				dst_ptr[x] = (dst_ptr[x] & 0xf0) | (dot & 0xf); // Maintain destination alpha
+				char dst_value = dst_ptr[x];
+				char src_value = src_ptr[x];
+				
+				// Use the alpha map for 'alphaboth', but act as if the dst frame has
+				// alpha of 0xf and preserve its original alpha value.
+				
+				char v = gAlphaMap[(unsigned char)src_value * 256 + (unsigned char)(dst_value | 0xf0)];
+				
+				dst_ptr[x] = (dst_value & 0xf0) | (v & 0x0f);
+			}
+		}
+	}
+	else if(strcmp(opStr, "alphaboth") == 0)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
+			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
+			for (int x = 0; x < width; x++)
+			{
+				char dst_value = dst_ptr[x];
+				char src_value = src_ptr[x];
+				
+				dst_ptr[x] = gAlphaMap[(unsigned char)src_value * 256 + (unsigned char)dst_value];
 			}
 		}
 	}
@@ -291,6 +314,35 @@ DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *
 	Py_INCREF(Py_None);
 	return Py_None;
 }
+
+void InitializeAlphaMap()
+{
+	if (gAlphaMap != NULL)
+		return;
+	
+	gAlphaMap = (char*)malloc(256 * 256);
+	fflush(stderr);
+	for (int src = 0x00; src <= 0xff; src++)
+	{
+		for (int dst = 0x00; dst <= 0xff; dst++)
+		{
+			char src_dot = (src & 0xf);
+			char src_a   = (src >>  4);
+			char dst_dot = (dst & 0xf);
+			char dst_a   = (dst >>  4);
+			
+			float i = (float)(src_dot * src_a) / (15.0f * 15.0f);
+			float j = (float)(dst_dot * dst_a * (0xf - src_a)) / (15.0f * 15.0f * 15.0f);
+			
+			char dot = (char)( (i + j) * 15.0f );
+			char a   = MAX(src_a, dst_a);
+			
+			gAlphaMap[src * 256 + dst] = (a << 4) | (dot & 0xf);
+			// fprintf(stderr, "%02x -> %02x = %02x\n", src, dst, (unsigned char)gAlphaMap[src * 256 + dst]);
+		}
+	}
+}
+
 
 PyMethodDef DMDBuffer_methods[] = {
     {"clear", (PyCFunction)DMDBuffer_clear, METH_VARARGS,
