@@ -420,9 +420,9 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 	int number;
 	const char *eventTypeStr = NULL;
 	PyObject *ruleObj = NULL, *linked_driversObj = NULL;
-	bool drive_outputs_now = false;	
+	PyObject *drive_outputs_now = Py_False;
 	static char *kwlist[] = {"number", "event_type", "rule", "linked_drivers", "drive_outputs_now", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "isO|Oi", kwlist, &number, &eventTypeStr, &ruleObj, &linked_driversObj, &drive_outputs_now))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "isO|OO", kwlist, &number, &eventTypeStr, &ruleObj, &linked_driversObj, &drive_outputs_now))
 	{
 		return NULL;
 	}
@@ -484,7 +484,7 @@ PinPROC_switch_update_rule(pinproc_PinPROCObject *self, PyObject *args, PyObject
 		}
 	}
 
-	if (PRSwitchUpdateRule(self->handle, number, eventType, &rule, drivers, numDrivers, drive_outputs_now) == kPRSuccess)
+	if (PRSwitchUpdateRule(self->handle, number, eventType, &rule, drivers, numDrivers, drive_outputs_now == Py_True) == kPRSuccess)
 	{
 		if (drivers)
 			free(drivers);
