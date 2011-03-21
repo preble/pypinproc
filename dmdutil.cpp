@@ -9,19 +9,14 @@
 
 extern "C" {
 
-void InitializeAlphaMap();
-char *gAlphaMap = NULL;
-
 static PyObject *
 DMDBuffer_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     pinproc_DMDBufferObject *self;
 
-	InitializeAlphaMap();
-
     self = (pinproc_DMDBufferObject *)type->tp_alloc(type, 0);
     if (self != NULL) {
-		self->buffer = NULL;
+		self->frame = NULL;
     }
 
     return (PyObject *)self;
@@ -31,10 +26,10 @@ static void
 DMDBuffer_dealloc(PyObject* _self)
 {
 	pinproc_DMDBufferObject *self = (pinproc_DMDBufferObject *)_self;
-	if (self->buffer != NULL)
+	if (self->frame != NULL)
 	{
-		free(self->buffer);
-		self->buffer = NULL;
+		DMDFrameDelete(self->frame);
+		self->frame = NULL;
 	}
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -42,13 +37,14 @@ DMDBuffer_dealloc(PyObject* _self)
 static int
 DMDBuffer_init(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
+	unsigned width, height;
 	static char *kwlist[] = {"width", "height", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &self->width, &self->height))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "II", kwlist, &width, &height))
 	{
 		return -1;
 	}
-	self->buffer = (char*)calloc(self->width * self->height, 1);
-	if (self->buffer == NULL)
+	self->frame = DMDFrameCreate(DMDSizeMake(width, height));
+	if (self->frame == NULL)
 	{
 		PyErr_SetString(PyExc_IOError, "Failed to allocate memory");
 		return -1;
@@ -58,7 +54,7 @@ DMDBuffer_init(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 DMDBuffer_clear(pinproc_DMDBufferObject *self, PyObject *args)
 {
-	memset(self->buffer, 0, self->width * self->height);
+	memset(self->frame->buffer, 0, DMDFrameGetBufferSize(self->frame));
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -71,7 +67,7 @@ DMDBuffer_set_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 	{
 		return NULL;
 	}
-	int frame_size = self->width * self->height;
+	unsigned frame_size = DMDFrameGetBufferSize(self->frame);
 	if (PyString_Size(data_str) != frame_size)
 	{
 		fprintf(stderr, "length=%d != %d", (int)PyString_Size(data_str), frame_size);
@@ -79,7 +75,7 @@ DMDBuffer_set_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 		return NULL;
 	}
 
-	memcpy(self->buffer, PyString_AsString(data_str), frame_size);
+	memcpy(self->frame->buffer, PyString_AsString(data_str), frame_size);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -87,54 +83,54 @@ DMDBuffer_set_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds
 static PyObject *
 DMDBuffer_get_data(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
-	return PyString_FromStringAndSize(self->buffer, self->width * self->height);
+	return PyString_FromStringAndSize((char *)self->frame->buffer, DMDFrameGetBufferSize(self->frame));
 }
 static PyObject *
 DMDBuffer_get_data_mult(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
-	char *scratchBuffer = (char *)malloc(self->width * self->height);
-	for (int i = 0; i < self->width * self->height; i++)
+	DMDFrame *scratch = DMDFrameCopy(self->frame);
+	for (unsigned i = 0; i < self->frame->size.width * self->frame->size.height; i++)
 	{
-		unsigned char c = (self->buffer[i] + 1) * 16 - 1;
-		scratchBuffer[i] = c > 15 ? c : 0;
+		unsigned char c = (self->frame->buffer[i] + 1) * 16 - 1;
+		scratch->buffer[i] = c > 15 ? c : 0;
 	}
-	PyObject *output = PyString_FromStringAndSize(scratchBuffer, self->width * self->height);
-	free(scratchBuffer);
+	PyObject *output = PyString_FromStringAndSize((char*)scratch->buffer, DMDFrameGetBufferSize(self->frame));
+	DMDFrameDelete(scratch);
 	return output;
 }
 static PyObject *
 DMDBuffer_get_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
-	int x, y;
+	unsigned x, y;
 	static char *kwlist[] = {"x", "y", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &x, &y))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "II", kwlist, &x, &y))
 	{
 		return NULL;
 	}
-	if (x >= self->width || y >= self->height)
+	if (x >= self->frame->size.width || y >= self->frame->size.height)
 	{
 		PyErr_SetString(PyExc_ValueError, "X or Y are out of range");
 		return NULL;
 	}
 
-	return Py_BuildValue("i", self->buffer[y * self->width + x]);
+	return Py_BuildValue("i", DMDFrameGetDot(self->frame, DMDPointMake(x, y)));
 }
 static PyObject *
 DMDBuffer_set_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
-	int x, y, value;
+	unsigned x, y, value;
 	static char *kwlist[] = {"x", "y", "value", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &x, &y, &value))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "III", kwlist, &x, &y, &value))
 	{
 		return NULL;
 	}
-	if (x >= self->width || y >= self->height)
+	if (x >= self->frame->size.width || y >= self->frame->size.height)
 	{
 		PyErr_SetString(PyExc_ValueError, "X or Y are out of range");
 		return NULL;
 	}
 	
-	self->buffer[y * self->width + x] = (char)value;
+	DMDFrameSetDot(self->frame, DMDPointMake(x, y), value);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -142,205 +138,58 @@ DMDBuffer_set_dot(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 static PyObject *
 DMDBuffer_fill_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
-	int x0, y0, width, height, value;
+	unsigned x0, y0, width, height, value;
 	static char *kwlist[] = {"x", "y", "width", "height", "value", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiii", kwlist, &x0, &y0, &width, &height, &value))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "IIIII", kwlist, &x0, &y0, &width, &height, &value))
 	{
 		return NULL;
 	}
 	
-	for (int x = x0; x < x0 + width; x++)
-		for (int y = y0; y < y0 + height; y++)
-			if (x >= 0 && x < self->width && y >= 0 && y < self->height)
-				self->buffer[y * self->width + x] = (char)value;
+	DMDFrameFillRect(self->frame, DMDRectMake(x0, y0, width, height), (DMDColor)value);
 	
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
-#define DEBUG_COPY_TO_RECT(statement)
-//#define DEBUG_COPY_TO_RECT(statement) statement
-bool ConstrainToBuffers(pinproc_DMDBufferObject *dst, int &dst_x, int &dst_y, pinproc_DMDBufferObject *src, int &src_x, int &src_y, int &width, int &height)
-{
-	DEBUG_COPY_TO_RECT(fprintf(stderr, "Before: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	if (dst_x < 0)
-	{
-		src_x += -dst_x;
-		width -= -dst_x;
-		dst_x = 0;
-		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	}
-	if (dst_y < 0)
-	{
-		src_y += -dst_y;
-		height -= -dst_y;
-		dst_y = 0;
-		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	}
-	if (src_x < 0)
-	{
-		dst_x += -src_x;
-		width -= -src_x;
-		src_x = 0;
-		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	}
-	if (src_y < 0)
-	{
-		dst_y += -src_y;
-		height -= -src_y;
-		src_y = 0;
-		DEBUG_COPY_TO_RECT(fprintf(stderr, "% 6d: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", __LINE__, src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	}
-	if ((dst_x >= dst->width) || (dst_y >= dst->height) || (src_x >= src->width) || (src_y >= src->height) || (width < 0) || (height < 0))
-	{
-		return false;
-	}
-	
-	if (src_x + width  > src->width)  width = src->width - src_x;
-	if (src_y + height > src->height) height = src->height - src_y;
-	if (dst_x + width  > dst->width)  width = dst->width - dst_x;
-	if (dst_y + height > dst->height) height = dst->height - dst_y;
-	DEBUG_COPY_TO_RECT(fprintf(stderr, " After: src(%dx%d) @ %d, %d  dst(%dx%d) @ %d, %d  size=%dx%d\n", src->width, src->height, src_x, src_y, dst->width, dst->height, dst_x, dst_y, width, height));
-	return true;
-}
 static PyObject *
 DMDBuffer_copy_to_rect(pinproc_DMDBufferObject *self, PyObject *args, PyObject *kwds)
 {
 	pinproc_DMDBufferObject *src = self;
 	pinproc_DMDBufferObject *dst;
-	int dst_x, dst_y, src_x, src_y, width, height;
+	unsigned dst_x, dst_y, src_x, src_y, width, height;
 	const char *opStr = NULL;
 	static char *kwlist[] = {"dst", "dst_x", "dst_y", "src_x", "src_y", "width", "height", "op", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiiiiii|s", kwlist, &dst, &dst_x, &dst_y, &src_x, &src_y, &width, &height, &opStr))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OIIIIII|s", kwlist, &dst, &dst_x, &dst_y, &src_x, &src_y, &width, &height, &opStr))
 	{
 		return NULL;
 	}
 	
-	bool anything_to_do = ConstrainToBuffers(dst, dst_x, dst_y, src, src_x, src_y, width, height);
-	if (!anything_to_do)
-	{
-		Py_INCREF(Py_None);
-		return Py_None;
-	}
-
+	DMDBlendMode blendMode = DMDBlendModeCopy;
+	
 	if (opStr == NULL || strcmp(opStr, "copy") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			memcpy(dst_ptr, src_ptr, width);
-		}
-	}
+		blendMode = DMDBlendModeCopy;
 	else if(strcmp(opStr, "add") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			for (int x = 0; x < width; x++)
-			{
-				dst_ptr[x] = MIN(dst_ptr[x] + src_ptr[x], 0xF);
-			}
-		}
-	}
+		blendMode = DMDBlendModeAdd;
 	else if(strcmp(opStr, "sub") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			for (int x = 0; x < width; x++)
-			{
-				dst_ptr[x] = MAX(dst_ptr[x] - src_ptr[x], 0);
-			}
-		}
-	}
+		blendMode = DMDBlendModeSubtract;
 	else if(strcmp(opStr, "blacksrc") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			for (int x = 0; x < width; x++)
-			{
-				// Only write dots into black dots.
-				if ((src_ptr[x] & 0xf) != 0)
-					dst_ptr[x] = (dst_ptr[x] & 0xf0) | (src_ptr[x] & 0xf);
-			}
-		}
-	}
+		blendMode = DMDBlendModeBlackSource;
 	else if(strcmp(opStr, "alpha") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			for (int x = 0; x < width; x++)
-			{
-				char dst_value = dst_ptr[x];
-				char src_value = src_ptr[x];
-				
-				// Use the alpha map for 'alphaboth', but act as if the dst frame has
-				// alpha of 0xf and preserve its original alpha value.
-				
-				char v = gAlphaMap[(unsigned char)src_value * 256 + (unsigned char)(dst_value | 0xf0)];
-				
-				dst_ptr[x] = (dst_value & 0xf0) | (v & 0x0f);
-			}
-		}
-	}
+		blendMode = DMDBlendModeAlpha;
 	else if(strcmp(opStr, "alphaboth") == 0)
-	{
-		for (int y = 0; y < height; y++)
-		{
-			char *src_ptr = &src->buffer[(src_y + y) * src->width + src_x];
-			char *dst_ptr = &dst->buffer[(dst_y + y) * dst->width + dst_x];
-			for (int x = 0; x < width; x++)
-			{
-				char dst_value = dst_ptr[x];
-				char src_value = src_ptr[x];
-				
-				dst_ptr[x] = gAlphaMap[(unsigned char)src_value * 256 + (unsigned char)dst_value];
-			}
-		}
-	}
+		blendMode = DMDBlendModeAlphaBoth;
 	else
 	{
 		PyErr_SetString(PyExc_ValueError, "Operation type not recognized.");
 		return NULL;
 	}
 	
+	DMDRect srcRect = DMDRectMake(src_x, src_y, width, height);
+	DMDPoint dstPoint = DMDPointMake(dst_x, dst_y);
+	DMDFrameCopyRect(src->frame, srcRect, dst->frame, dstPoint, blendMode);
+	
 	Py_INCREF(Py_None);
 	return Py_None;
-}
-
-void InitializeAlphaMap()
-{
-	if (gAlphaMap != NULL)
-		return;
-	
-	gAlphaMap = (char*)malloc(256 * 256);
-	fflush(stderr);
-	for (int src = 0x00; src <= 0xff; src++)
-	{
-		for (int dst = 0x00; dst <= 0xff; dst++)
-		{
-			char src_dot = (src & 0xf);
-			char src_a   = (src >>  4);
-			char dst_dot = (dst & 0xf);
-			char dst_a   = (dst >>  4);
-			
-			float i = (float)(src_dot * src_a) / (15.0f * 15.0f);
-			float j = (float)(dst_dot * dst_a * (0xf - src_a)) / (15.0f * 15.0f * 15.0f);
-			
-			char dot = (char)( (i + j) * 15.0f );
-			char a   = MAX(src_a, dst_a);
-			
-			gAlphaMap[src * 256 + dst] = (a << 4) | (dot & 0xf);
-			// fprintf(stderr, "%02x -> %02x = %02x\n", src, dst, (unsigned char)gAlphaMap[src * 256 + dst]);
-		}
-	}
 }
 
 

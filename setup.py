@@ -22,7 +22,7 @@ module1 = Extension("pinproc",
 					library_dirs = ['/usr/local/lib', '../libpinproc/bin'],
 					extra_compile_args = extra_compile_args,
 					extra_link_args = extra_link_args,
-					sources = ['pypinproc.cpp', 'dmdutil.cpp'])
+					sources = ['pypinproc.cpp', 'dmdutil.cpp', 'dmd.c'])
 
 setup(name = "pinproc",
       version = "0.2",
