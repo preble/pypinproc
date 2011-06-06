@@ -132,6 +132,51 @@ PinPROC_reset(pinproc_PinPROCObject *self, PyObject *args)
 }
 
 static PyObject *
+PinPROC_driver_update_group_config(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int groupNum;
+        int slowTime;
+	int enableIndex;
+	int rowActivateIndex;
+	int rowEnableSelect;
+	PyObject *matrixed = Py_False;
+	PyObject *polarity = Py_False;
+	PyObject *active = Py_False;
+	PyObject *disableStrobeAfter = Py_False;
+
+	static char *kwlist[] = {"group_num", "slow_time", "enable_index", "row_activate_index", "row_enable_select", "matrixed", "polarity", "active", "disable_strobe_after", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiii0000", kwlist, &groupNum, &slowTime, &enableIndex, &rowActivateIndex, &rowEnableSelect, &matrixed, &polarity, &active, &disableStrobeAfter))
+	{
+		return NULL;
+	}
+	
+	PRDriverGroupConfig group;
+	group.groupNum = groupNum;
+        group.slowTime = slowTime;
+        group.enableIndex = enableIndex;
+        group.rowActivateIndex = rowActivateIndex;
+        group.rowEnableSelect = rowEnableSelect;
+        group.matrixed = matrixed == Py_True;
+        group.polarity = polarity == Py_True;
+        group.active = active == Py_True;
+        group.disableStrobeAfter = disableStrobeAfter == Py_True;
+
+	PRResult res;
+        res = PRDriverUpdateGroupConfig(self->handle, &group);
+
+	if (res == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error configuring driver group");
+		return NULL;
+	}
+}
+
+static PyObject *
 PinPROC_driver_group_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number;
@@ -812,6 +857,9 @@ static PyMethodDef PinPROC_methods[] = {
     },
     {"dmd_update_config", (PyCFunction)PinPROC_dmd_update_config, METH_VARARGS | METH_KEYWORDS,
      "Configures the DMD"
+    },
+    {"driver_update_group_config", (PyCFunction)PinPROC_driver_update_group_config, METH_VARARGS | METH_KEYWORDS,
+     "Sets the driver group configuratiaon"
     },
     {"driver_group_disable", (PyCFunction)PinPROC_driver_group_disable, METH_VARARGS | METH_KEYWORDS,
      "Disables the specified driver group"
