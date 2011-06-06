@@ -749,7 +749,6 @@ PinPROC_dmd_set_color_mapping(pinproc_PinPROCObject *self, PyObject *args, PyObj
 	Py_INCREF(Py_None);
 	return Py_None;
 }
-#define drawdot(subFrame) dots[subFrame*(kDMDColumns*kDMDRows/8) + ((row*kDMDColumns+col)/8)] |= 1 << (col % 8)
 
 static PyObject *
 PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
@@ -771,66 +770,22 @@ PinPROC_dmd_draw(pinproc_PinPROCObject *self, PyObject *args)
 	uint8_t dots[4*kDMDColumns*kDMDRows/8];
 	memset(dots, 0, sizeof(dots));
 	
-	if (PyString_Check(dotsObj))
+	if (PyObject_TypeCheck(dotsObj, &pinproc_DMDBufferType))
 	{
-		const int rgbaSize = 4*kDMDColumns*kDMDRows;
-	
-		if (PyString_Size(dotsObj) != rgbaSize)
-		{
-			fprintf(stderr, "length=%d", (int)PyString_Size(dotsObj));
-			PyErr_SetString(PyExc_ValueError, "Buffer length is incorrect");
-			return NULL;
-		}
-		uint32_t *source = (uint32_t *)PyString_AsString(dotsObj);
-		for (int row = 0; row < kDMDRows; row++)
-		{
-			for (int col = 0; col < kDMDColumns; col++)
-			{
-				uint32_t dot = source[row*kDMDColumns + col];
-				uint32_t luma = ((dot>>24) & 0xff) + ((dot>>16) & 0xff) + ((dot>>8) & 0xff) + (dot & 0xff);
-	            switch (luma/(1020/4)) // for testing
-	            {
-	                case 0:
-	                    break;
-	                case 1: drawdot(0); break;
-	                case 2: drawdot(0); drawdot(2); break;
-	                case 3: drawdot(0); drawdot(1); drawdot(2); drawdot(3); break;
-	            }
-			}
-		}
-	}
-	else
-	{
-		// Assume that it is a DMDBuffer object
-		// TODO: Check that this is a DMDBuffer object!
 		pinproc_DMDBufferObject *buffer = (pinproc_DMDBufferObject *)dotsObj;
-		if (buffer->width != kDMDColumns || buffer->height != kDMDRows)
+		if (buffer->frame->size.width != kDMDColumns || buffer->frame->size.height != kDMDRows)
 		{
-			fprintf(stderr, "w=%d h=%d", buffer->width, buffer->height);
+			fprintf(stderr, "w=%d h=%d", buffer->frame->size.width, buffer->frame->size.height);
 			PyErr_SetString(PyExc_ValueError, "Buffer dimensions are incorrect");
 			return NULL;
 		}
-		for (int row = 0; row < kDMDRows; row++)
-		{
-			for (int col = 0; col < kDMDColumns; col++)
-			{
-				char dot = buffer->buffer[row*buffer->width+col];
-				if (dot == 0)
-					continue;
-				else
-				{
-					dot &= 0x0f;
-					dot = self->dmdMapping[(int)dot]; // Apply the mapping from dmd_set_color_mapping()
-					int mappedColors[] = {0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15};
-					dot = mappedColors[(int)dot];
-					if (dot & 0x1) drawdot(0);
-					if (dot & 0x2) drawdot(1);
-					if (dot & 0x4) drawdot(2);
-					if (dot & 0x8) drawdot(3);
-				}
-			}
-		}
-	}	
+		DMDFrameCopyPROCSubframes(buffer->frame, dots, kDMDColumns, kDMDRows, 4, self->dmdMapping);
+	}
+	else
+	{
+		PyErr_SetString(PyExc_ValueError, "Expected DMDBuffer or string.");
+		return NULL;
+	}
 	
 	res = PRDMDDraw(self->handle, dots);
 	ReturnOnErrorAndSetIOError(res);
@@ -1143,8 +1098,6 @@ PyMethodDef methods[] = {
 		{"aux_command_jump", (PyCFunction)pinproc_aux_command_jump, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given aux jump command"},
 		{"aux_command_disable", (PyCFunction)pinproc_aux_command_disable, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given aux command disabled"},
 		{NULL, NULL, 0, NULL}};
-
-extern PyTypeObject pinproc_DMDBufferType;
 
 PyMODINIT_FUNC initpinproc()
 {
