@@ -132,6 +132,60 @@ PinPROC_reset(pinproc_PinPROCObject *self, PyObject *args)
 }
 
 static PyObject *
+PinPROC_driver_update_global_config(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *enableOutputs = Py_False;
+	PyObject *globalPolarity = Py_False;
+	PyObject *useClear = Py_False;
+	PyObject *strobeStartSelect = Py_False;
+        int startStrobeTime;
+	int matrixRowEnableIndex0;
+	int matrixRowEnableIndex1;
+	PyObject *activeLowMatrixRows = Py_False;
+	PyObject *tickleSternWatchdog = Py_False;
+	PyObject *encodeEnables = Py_False;
+	PyObject *watchdogExpired = Py_False;
+	PyObject *watchdogEnable = Py_False;
+	int watchdogResetTime;
+
+	static char *kwlist[] = {"enable_outputs", "global_polarity", "use_clear", "strobe_start_select", "start_strobe_time", "matrix_row_enable_index_0", "matrix_row_enable_index_1", "active_low_matrix_rows", "tickle_stern_watchdog", "encode_enables", "watchdog_expired", "watchdog_enable", "watchdog_reset_time", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOOOiiiOOOOOi", kwlist, &enableOutputs, &globalPolarity, &useClear, &strobeStartSelect, &startStrobeTime, &matrixRowEnableIndex0, &matrixRowEnableIndex1, &activeLowMatrixRows, &tickleSternWatchdog, &encodeEnables, &watchdogExpired, &watchdogEnable, &watchdogResetTime))
+	{
+		return NULL;
+	}
+	
+	PRDriverGlobalConfig globals;
+	globals.enableOutputs = enableOutputs == Py_True;
+	globals.globalPolarity = globalPolarity == Py_True;
+	globals.useClear = useClear == Py_True;
+	globals.strobeStartSelect = strobeStartSelect == Py_True;
+	globals.startStrobeTime = startStrobeTime; // milliseconds per output loop
+	globals.matrixRowEnableIndex0 = matrixRowEnableIndex0;
+	globals.matrixRowEnableIndex1 = matrixRowEnableIndex1;
+	globals.activeLowMatrixRows = activeLowMatrixRows == Py_True;
+	globals.tickleSternWatchdog = tickleSternWatchdog == Py_True;
+	globals.encodeEnables = encodeEnables == Py_True;
+	globals.watchdogExpired = watchdogExpired == Py_True;
+	globals.watchdogEnable = watchdogEnable == Py_True;
+	globals.watchdogResetTime = watchdogResetTime;
+
+	PRResult res;
+        res = PRDriverUpdateGlobalConfig(self->handle, &globals);
+
+	if (res == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error configuring driver globals");
+		return NULL;
+	}
+}
+
+static PyObject *
 PinPROC_driver_update_group_config(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int groupNum;
@@ -145,7 +199,8 @@ PinPROC_driver_update_group_config(pinproc_PinPROCObject *self, PyObject *args, 
 	PyObject *disableStrobeAfter = Py_False;
 
 	static char *kwlist[] = {"group_num", "slow_time", "enable_index", "row_activate_index", "row_enable_select", "matrixed", "polarity", "active", "disable_strobe_after", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiii0000", kwlist, &groupNum, &slowTime, &enableIndex, &rowActivateIndex, &rowEnableSelect, &matrixed, &polarity, &active, &disableStrobeAfter))
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiiiOOOO", kwlist, &groupNum, &slowTime, &enableIndex, &rowActivateIndex, &rowEnableSelect, &matrixed, &polarity, &active, &disableStrobeAfter))
 	{
 		return NULL;
 	}
@@ -415,16 +470,32 @@ PinPROC_driver_get_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *
 static PyObject *
 PinPROC_driver_update_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
-	PyObject *dict;
-	static char *kwlist[] = {"number", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &dict))
+        int number;
+        int driveTime;
+	PyObject *polarity = Py_False;
+	PyObject *state = Py_False;
+	PyObject *waitForFirstTimeSlot = Py_False;
+        int timeslots;
+        int patterOnTime;
+        int patterOffTime;
+	PyObject *patterEnable = Py_False;
+        
+	static char *kwlist[] = {"number", "drive_time", "polarity", "state", "wait_for_first_timeslow", "timeslots", "patter_on_time", "patter_off_time", "patter_enable", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiOOOiiiO", kwlist, &number, &driveTime, &polarity, &state, &waitForFirstTimeSlot, &timeslots, &patterOnTime, &patterOffTime, &patterEnable))
 	{
 		return NULL;
 	}
 	
 	PRDriverState driver;
-	if (!PyDictToDriverState(dict, &driver))
-		return NULL;
+        driver.driverNum = number;
+	driver.outputDriveTime = driveTime;
+        driver.polarity = polarity == Py_True;
+        driver.state = state == Py_True;
+        driver.waitForFirstTimeSlot = waitForFirstTimeSlot == Py_True;
+	driver.timeslots = timeslots;
+	driver.patterOnTime = patterOnTime;
+	driver.patterOffTime = patterOffTime;
+        driver.patterEnable = patterEnable == Py_True;
 
 	if (PRDriverUpdateState(self->handle, &driver) == kPRSuccess)
 	{
@@ -433,7 +504,7 @@ PinPROC_driver_update_state(pinproc_PinPROCObject *self, PyObject *args, PyObjec
 	}
 	else
 	{
-		PyErr_SetString(PyExc_IOError, "Error getting driver state");
+		PyErr_SetString(PyExc_IOError, "Error updating driver state");
 		return NULL;
 	}
 }
@@ -603,6 +674,32 @@ PinPROC_aux_send_commands(pinproc_PinPROCObject *self, PyObject *args, PyObject 
 		if (commands)
 			free(commands);
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error sending aux commands");
+		return NULL;
+	}
+}
+
+static PyObject *
+PinPROC_write_data(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int module;
+	int address;
+	int data;
+	static char *kwlist[] = {"module", "address", "data", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &module, &address, &data))
+	{
+		return NULL;
+	}
+	
+	fprintf(stderr, "\n\nWriting data:%x to addr:%d\n\n", data, address);
+
+	if (PRWriteData(self->handle, module, address, 1, (uint32_t *)&data) == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error writing data");
 		return NULL;
 	}
 }
@@ -813,6 +910,9 @@ static PyMethodDef PinPROC_methods[] = {
     {"dmd_update_config", (PyCFunction)PinPROC_dmd_update_config, METH_VARARGS | METH_KEYWORDS,
      "Configures the DMD"
     },
+    {"driver_update_global_config", (PyCFunction)PinPROC_driver_update_global_config, METH_VARARGS | METH_KEYWORDS,
+     "Sets the driver global configuratiaon"
+    },
     {"driver_update_group_config", (PyCFunction)PinPROC_driver_update_group_config, METH_VARARGS | METH_KEYWORDS,
      "Sets the driver group configuratiaon"
     },
@@ -851,6 +951,9 @@ static PyMethodDef PinPROC_methods[] = {
     },
     {"aux_send_commands", (PyCFunction)PinPROC_aux_send_commands, METH_VARARGS | METH_KEYWORDS,
      "Writes aux port commands into the Aux port instruction memory"
+    },
+    {"write_data", (PyCFunction)PinPROC_write_data, METH_VARARGS | METH_KEYWORDS,
+     "Write data directly to a P-ROC memory address"
     },
     {"watchdog_tickle", (PyCFunction)PinPROC_watchdog_tickle, METH_VARARGS, 
 	 "Tickles the watchdog"
