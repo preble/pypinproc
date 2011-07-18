@@ -470,32 +470,16 @@ PinPROC_driver_get_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *
 static PyObject *
 PinPROC_driver_update_state(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
-        int number;
-        int driveTime;
-	PyObject *polarity = Py_False;
-	PyObject *state = Py_False;
-	PyObject *waitForFirstTimeSlot = Py_False;
-        int timeslots;
-        int patterOnTime;
-        int patterOffTime;
-	PyObject *patterEnable = Py_False;
-        
-	static char *kwlist[] = {"number", "drive_time", "polarity", "state", "wait_for_first_timeslow", "timeslots", "patter_on_time", "patter_off_time", "patter_enable", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiOOOiiiO", kwlist, &number, &driveTime, &polarity, &state, &waitForFirstTimeSlot, &timeslots, &patterOnTime, &patterOffTime, &patterEnable))
+	PyObject *dict;
+	static char *kwlist[] = {"number", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &dict))
 	{
 		return NULL;
 	}
-	
+
 	PRDriverState driver;
-        driver.driverNum = number;
-	driver.outputDriveTime = driveTime;
-        driver.polarity = polarity == Py_True;
-        driver.state = state == Py_True;
-        driver.waitForFirstTimeSlot = waitForFirstTimeSlot == Py_True;
-	driver.timeslots = timeslots;
-	driver.patterOnTime = patterOnTime;
-	driver.patterOffTime = patterOffTime;
-        driver.patterEnable = patterEnable == Py_True;
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
 
 	if (PRDriverUpdateState(self->handle, &driver) == kPRSuccess)
 	{
@@ -504,11 +488,10 @@ PinPROC_driver_update_state(pinproc_PinPROCObject *self, PyObject *args, PyObjec
 	}
 	else
 	{
-		PyErr_SetString(PyExc_IOError, "Error updating driver state");
+		PyErr_SetString(PyExc_IOError, "Error getting driver state");
 		return NULL;
 	}
 }
-
 
 static PyObject *
 PinPROC_switch_get_states(pinproc_PinPROCObject *self, PyObject *args)
