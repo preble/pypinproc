@@ -101,9 +101,15 @@ void DMDFrameCopyRect(DMDFrame *src, DMDRect srcRect, DMDFrame *dst, DMDPoint ds
 	DMDRect dstRect = DMDRectIntersection(DMDFrameGetBounds(dst), DMDRectMake(dstPoint.x, dstPoint.y, srcRect.size.width, srcRect.size.height));
 	// Short term fix for negative destination points:
 	if (dstPoint.x < 0)
+	{
 		srcRect.origin.x += -dstPoint.x;
+		srcRect.size.width -= -dstPoint.x;
+	}
 	if (dstPoint.y < 0)
+	{
 		srcRect.origin.y += -dstPoint.y;
+		srcRect.size.height -= -dstPoint.y;
+	}
 	if (srcRect.size.width == 0 || srcRect.size.height == 0)
 		return; /* nothing to do */
 	
