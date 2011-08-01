@@ -84,10 +84,10 @@ void DMDFrameFillRect(DMDFrame *frame, DMDRect rect, DMDColor color)
 {
 	rect = DMDRectIntersection(DMDFrameGetBounds(frame), rect);
 	
-	unsigned maxX = DMDRectGetMaxX(rect);
-	unsigned maxY = DMDRectGetMaxY(rect);
+	DMDDimension maxX = DMDRectGetMaxX(rect);
+	DMDDimension maxY = DMDRectGetMaxY(rect);
 	
-	unsigned x, y;
+	DMDDimension x, y;
 	
 	/* TOOD: Rewrite this to use memset for rows. */
 	for (x = DMDRectGetMinX(rect); x < maxX; x++)
@@ -102,9 +102,9 @@ void DMDFrameCopyRect(DMDFrame *src, DMDRect srcRect, DMDFrame *dst, DMDPoint ds
 	if (srcRect.size.width == 0 || srcRect.size.height == 0)
 		return; /* nothing to do */
 	
-	unsigned width  = dstRect.size.width;
-	unsigned height = dstRect.size.height;
-	unsigned x, y;
+	DMDDimension width  = dstRect.size.width;
+	DMDDimension height = dstRect.size.height;
+	DMDDimension x, y;
 	
 	if (blendMode == DMDBlendModeCopy)
 	{
@@ -231,7 +231,7 @@ DMDColor *DMDGetAlphaMap(void)
 
 #define drawdot(subFrame) dots[subFrame*(width*height/8) + ((row*width+col)/8)] |= 1 << (col % 8)
 
-void DMDFrameCopyPROCSubframes(DMDFrame *frame, unsigned char *dots, unsigned width, unsigned height, unsigned subframes, unsigned char *colorMap)
+void DMDFrameCopyPROCSubframes(DMDFrame *frame, unsigned char *dots, DMDDimension width, DMDDimension height, unsigned subframes, unsigned char *colorMap)
 {
 	if (subframes != 4)
 	{

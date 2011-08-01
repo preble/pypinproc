@@ -53,12 +53,14 @@ typedef unsigned char DMDColor;
  * DMDRect, DMDSize, DMDPoint data structures adapted from Apple's Core Graphics data structures.
  */
 
+typedef int DMDDimension;
+
 typedef struct _DMDPoint {
-	unsigned x, y;
+	DMDDimension x, y;
 } DMDPoint;
 
 typedef struct _DMDSize {
-	unsigned width, height;
+	DMDDimension width, height;
 } DMDSize;
 
 typedef struct _DMDRect {
@@ -66,14 +68,14 @@ typedef struct _DMDRect {
 	DMDSize size;
 } DMDRect;
 
-static inline DMDPoint DMDPointMake(unsigned x, unsigned y) { DMDPoint p = {x, y}; return p; }
-static inline DMDSize DMDSizeMake(unsigned w, unsigned h) { DMDSize s = {w, h}; return s; }
+static inline DMDPoint DMDPointMake(DMDDimension x, DMDDimension y) { DMDPoint p = {x, y}; return p; }
+static inline DMDSize DMDSizeMake(DMDDimension w, DMDDimension h) { DMDSize s = {w, h}; return s; }
 
-static inline DMDRect DMDRectMake(unsigned x, unsigned y, unsigned w, unsigned h) { DMDRect r = {{x, y}, {w, h}}; return r; }
-static inline unsigned DMDRectGetMinX(DMDRect r) { return r.origin.x; }
-static inline unsigned DMDRectGetMinY(DMDRect r) { return r.origin.y; }
-static inline unsigned DMDRectGetMaxX(DMDRect r) { return r.origin.x + r.size.width; }
-static inline unsigned DMDRectGetMaxY(DMDRect r) { return r.origin.y + r.size.height; }
+static inline DMDRect DMDRectMake(DMDDimension x, DMDDimension y, DMDDimension w, DMDDimension h) { DMDRect r = {{x, y}, {w, h}}; return r; }
+static inline DMDDimension DMDRectGetMinX(DMDRect r) { return r.origin.x; }
+static inline DMDDimension DMDRectGetMinY(DMDRect r) { return r.origin.y; }
+static inline DMDDimension DMDRectGetMaxX(DMDRect r) { return r.origin.x + r.size.width; }
+static inline DMDDimension DMDRectGetMaxY(DMDRect r) { return r.origin.y + r.size.height; }
 
 DMDRect DMDRectIntersection(DMDRect a, DMDRect b);
 
@@ -125,7 +127,7 @@ void DMDFrameCopyRect(DMDFrame *from, DMDRect fromRect, DMDFrame *to, DMDPoint t
  * DMDFrame - P-ROC DMD Driver Support
  */
 
-void DMDFrameCopyPROCSubframes(DMDFrame *frame, unsigned char *dots, unsigned width, unsigned height, unsigned subframes, unsigned char *colorMap);
+void DMDFrameCopyPROCSubframes(DMDFrame *frame, unsigned char *dots, DMDDimension width, DMDDimension height, unsigned subframes, unsigned char *colorMap);
 
 
 DMD_EXTERN_C_END
