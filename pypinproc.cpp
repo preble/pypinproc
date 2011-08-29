@@ -1213,6 +1213,8 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "MachineTypeSternWhitestar", kPRMachineSternWhitestar);
     PyModule_AddIntConstant(m, "MachineTypeCustom", kPRMachineCustom);
     PyModule_AddIntConstant(m, "MachineTypeInvalid", kPRMachineInvalid);
+    PyModule_AddIntConstant(m, "SwitchNeverDebounceFirst", kPRSwitchNeverDebounceFirst);
+    PyModule_AddIntConstant(m, "SwitchNeverDebounceLast", kPRSwitchNeverDebounceLast);
     
 }
 
