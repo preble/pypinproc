@@ -714,6 +714,7 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 		PyObject *dict = PyDict_New();
 		PyDict_SetItemString(dict, "type", Py_BuildValue("i", events[i].type));
 		PyDict_SetItemString(dict, "value", Py_BuildValue("i", events[i].value));
+		PyDict_SetItemString(dict, "time", Py_BuildValue("i", events[i].time));
 		PyList_Append(list, dict);
 	}
 	return list;
