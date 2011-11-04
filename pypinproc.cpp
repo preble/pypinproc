@@ -78,6 +78,8 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 		return  kPRMachineSternSAM;
 	else if (strcmp(PyString_AsString(machineTypeObj), "sternWhitestar") == 0)
 		return  kPRMachineSternWhitestar;
+	else if (strcmp(PyString_AsString(machineTypeObj), "pdb") == 0)
+		return kPRMachineCustom;
 	else if (strcmp(PyString_AsString(machineTypeObj), "custom") == 0)
 		return kPRMachineCustom;
 	
@@ -1212,10 +1214,12 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "MachineTypeWPC95", kPRMachineWPC95);
     PyModule_AddIntConstant(m, "MachineTypeSternSAM", kPRMachineSternSAM);
     PyModule_AddIntConstant(m, "MachineTypeSternWhitestar", kPRMachineSternWhitestar);
+    PyModule_AddIntConstant(m, "MachineTypePDB", kPRMachinePDB);
     PyModule_AddIntConstant(m, "MachineTypeCustom", kPRMachineCustom);
     PyModule_AddIntConstant(m, "MachineTypeInvalid", kPRMachineInvalid);
     PyModule_AddIntConstant(m, "SwitchNeverDebounceFirst", kPRSwitchNeverDebounceFirst);
     PyModule_AddIntConstant(m, "SwitchNeverDebounceLast", kPRSwitchNeverDebounceLast);
+    PyModule_AddIntConstant(m, "DriverCount", kPRDriverCount);
     
 }
 
