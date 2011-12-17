@@ -707,7 +707,6 @@ PinPROC_write_data(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 		
-	printf("\n*** Writing data: module: %x, address: %x, data:%x", module, address, data);
 	if (PRWriteData(self->handle, module, address, 1, (uint32_t *)&data) == kPRSuccess)
 	{
 		Py_INCREF(Py_None);
