@@ -282,6 +282,30 @@ PinPROC_driver_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds
 }
 
 static PyObject *
+PinPROC_driver_future_pulse(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
+{
+	int number, milliseconds, futureTime;
+	static char *kwlist[] = {"number", "milliseconds", "future_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &number, &milliseconds, &futureTime))
+	{
+		return NULL;
+	}
+	
+	PRResult res;
+	res = PRDriverFuturePulse(self->handle, number, milliseconds, futureTime);
+	if (res == kPRSuccess)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	else
+	{
+		PyErr_SetString(PyExc_IOError, "Error requesting driver future pulse.");
+		return NULL;
+	}
+}
+
+static PyObject *
 PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, cycleSeconds;
@@ -302,7 +326,7 @@ PinPROC_driver_schedule(pinproc_PinPROCObject *self, PyObject *args, PyObject *k
 	}
 	else
 	{
-		PyErr_SetString(PyExc_IOError, "Error pulsing driver");
+		PyErr_SetString(PyExc_IOError, "Error scheduling driver");
 		return NULL;
 	}
 }
@@ -675,9 +699,15 @@ PinPROC_write_data(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	{
 		return NULL;
 	}
-	
-	fprintf(stderr, "\n\nWriting data:%x to addr:%d\n\n", data, address);
 
+	// Always flush previously staged writes first.
+	if (PRFlushWriteData(self->handle) != kPRSuccess)
+	{
+		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error writing data");
+		return NULL;
+	}
+		
+	printf("\n*** Writing data: module: %x, address: %x, data:%x", module, address, data);
 	if (PRWriteData(self->handle, module, address, 1, (uint32_t *)&data) == kPRSuccess)
 	{
 		Py_INCREF(Py_None);
@@ -909,6 +939,9 @@ static PyMethodDef PinPROC_methods[] = {
     {"driver_pulse", (PyCFunction)PinPROC_driver_pulse, METH_VARARGS | METH_KEYWORDS,
      "Pulses the specified driver"
     },
+    {"driver_future_pulse", (PyCFunction)PinPROC_driver_future_pulse, METH_VARARGS | METH_KEYWORDS,
+     "Pulses the specified driver at a future time"
+    },
     {"driver_schedule", (PyCFunction)PinPROC_driver_schedule, METH_VARARGS | METH_KEYWORDS,
      "Schedules the specified driver"
     },
@@ -1049,6 +1082,21 @@ pinproc_driver_state_pulse(PyObject *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+pinproc_driver_state_future_pulse(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *dict;
+	int ms, ft;
+	static char *kwlist[] = {"state", "milliseconds", "future_time", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oii", kwlist, &dict, &ms, &ft))
+		return NULL;
+	PRDriverState driver;
+	if (!PyDictToDriverState(dict, &driver))
+		return NULL;
+	PRDriverStateFuturePulse(&driver, ms, ft);
+	return PyDictFromDriverState(&driver);
+}
+
+static PyObject *
 pinproc_driver_state_schedule(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *dict;
@@ -1178,6 +1226,7 @@ PyMethodDef methods[] = {
 		{"normalize_machine_type", (PyCFunction)pinproc_normalize_machine_type, METH_VARARGS | METH_KEYWORDS, "Converts a string to an integer style machine type.  Integers pass through."},
 		{"driver_state_disable", (PyCFunction)pinproc_driver_state_disable, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to disable the driver"},
 		{"driver_state_pulse", (PyCFunction)pinproc_driver_state_pulse, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulse the driver"},
+		{"driver_state_future_pulse", (PyCFunction)pinproc_driver_state_future_pulse, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulse the driver in the future"},
 		{"driver_state_schedule", (PyCFunction)pinproc_driver_state_schedule, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to schedule the driver"},
 		{"driver_state_patter", (PyCFunction)pinproc_driver_state_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to patter the driver"},
 		{"driver_state_pulsed_patter", (PyCFunction)pinproc_driver_state_pulsed_patter, METH_VARARGS | METH_KEYWORDS, "Return a copy of the given driver state to pulsed-patter the driver"},
@@ -1217,6 +1266,7 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "MachineTypePDB", kPRMachinePDB);
     PyModule_AddIntConstant(m, "MachineTypeCustom", kPRMachineCustom);
     PyModule_AddIntConstant(m, "MachineTypeInvalid", kPRMachineInvalid);
+    PyModule_AddIntConstant(m, "SwitchCount", kPRSwitchPhysicalLast);
     PyModule_AddIntConstant(m, "SwitchNeverDebounceFirst", kPRSwitchNeverDebounceFirst);
     PyModule_AddIntConstant(m, "SwitchNeverDebounceLast", kPRSwitchNeverDebounceLast);
     PyModule_AddIntConstant(m, "DriverCount", kPRDriverCount);
