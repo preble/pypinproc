@@ -414,6 +414,7 @@ PyObject *PyDictFromDriverState(PRDriverState *driver)
 	DICT_SET_STRING_INT("patterOnTime", driver->patterOnTime);
 	DICT_SET_STRING_INT("patterOffTime", driver->patterOffTime);
 	DICT_SET_STRING_INT("patterEnable", driver->patterEnable);
+	DICT_SET_STRING_INT("futureEnable", driver->futureEnable);
 	return dict;
 }
 bool PyDictToDriverState(PyObject *dict, PRDriverState *driver)
@@ -427,6 +428,7 @@ bool PyDictToDriverState(PyObject *dict, PRDriverState *driver)
 	DICT_GET_STRING_INT("patterOnTime", driver->patterOnTime);
 	DICT_GET_STRING_INT("patterOffTime", driver->patterOffTime);
 	DICT_GET_STRING_INT("patterEnable", driver->patterEnable);
+	DICT_GET_STRING_INT("futureEnable", driver->futureEnable);
 	return true;
 }
 PyObject *PyDictFromAuxCommand(PRDriverAuxCommand *auxCommand)
