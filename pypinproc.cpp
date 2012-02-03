@@ -335,12 +335,13 @@ static PyObject *
 PinPROC_driver_patter(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, millisOn, millisOff, originalOnTime;
-	static char *kwlist[] = {"number", "milliseconds_on", "milliseconds_off", "original_on_time", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii", kwlist, &number, &millisOn, &millisOff, &originalOnTime))
+	PyObject *now;
+	static char *kwlist[] = {"number", "milliseconds_on", "milliseconds_off", "original_on_time", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiiO", kwlist, &number, &millisOn, &millisOff, &originalOnTime, &now))
 		return NULL;
 	
 	PRResult res;
-	res = PRDriverPatter(self->handle, number, millisOn, millisOff, originalOnTime);
+	res = PRDriverPatter(self->handle, number, millisOn, millisOff, originalOnTime, now == Py_True);
 	if (res == kPRSuccess)
 	{
 		Py_INCREF(Py_None);
@@ -357,12 +358,13 @@ static PyObject *
 PinPROC_driver_pulsed_patter(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 {
 	int number, millisOn, millisOff, millisPatterTime;
-	static char *kwlist[] = {"number", "milliseconds_on", "milliseconds_off", "milliseconds_overall_patter_time", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii", kwlist, &number, &millisOn, &millisOff, &millisPatterTime))
+	PyObject *now;
+	static char *kwlist[] = {"number", "milliseconds_on", "milliseconds_off", "milliseconds_overall_patter_time", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiiiO", kwlist, &number, &millisOn, &millisOff, &millisPatterTime, &now))
 		return NULL;
 	
 	PRResult res;
-	res = PRDriverPulsedPatter(self->handle, number, millisOn, millisOff, millisPatterTime);
+	res = PRDriverPulsedPatter(self->handle, number, millisOn, millisOff, millisPatterTime, now == Py_True);
 	if (res == kPRSuccess)
 	{
 		Py_INCREF(Py_None);
@@ -1118,13 +1120,14 @@ pinproc_driver_state_patter(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *dict;
 	int milliseconds_on, milliseconds_off, original_on_time;
-	static char *kwlist[] = {"state", "milliseconds_on", "milliseconds_off", "original_on_time", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &milliseconds_on, &milliseconds_off, &original_on_time))
+	PyObject *now;
+	static char *kwlist[] = {"state", "milliseconds_on", "milliseconds_off", "original_on_time", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OiiiO", kwlist, &dict, &milliseconds_on, &milliseconds_off, &original_on_time, &now))
 		return NULL;
 	PRDriverState driver;
 	if (!PyDictToDriverState(dict, &driver))
 		return NULL;
-	PRDriverStatePatter(&driver, milliseconds_on, milliseconds_off, original_on_time);
+	PRDriverStatePatter(&driver, milliseconds_on, milliseconds_off, original_on_time, now == Py_True);
 	return PyDictFromDriverState(&driver);
 }
 
@@ -1133,13 +1136,14 @@ pinproc_driver_state_pulsed_patter(PyObject *self, PyObject *args, PyObject *kwd
 {
 	PyObject *dict;
 	int milliseconds_on, milliseconds_off, milliseconds_patter_time;
-	static char *kwlist[] = {"state", "milliseconds_on", "milliseconds_off", "milliseconds_overal_patter_time", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiii", kwlist, &dict, &milliseconds_on, &milliseconds_off, &milliseconds_patter_time))
+	PyObject *now;
+	static char *kwlist[] = {"state", "milliseconds_on", "milliseconds_off", "milliseconds_overal_patter_time", "now", NULL};
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OiiiO", kwlist, &dict, &milliseconds_on, &milliseconds_off, &milliseconds_patter_time, &now))
 		return NULL;
 	PRDriverState driver;
 	if (!PyDictToDriverState(dict, &driver))
 		return NULL;
-	PRDriverStatePulsedPatter(&driver, milliseconds_on, milliseconds_off, milliseconds_patter_time);
+	PRDriverStatePulsedPatter(&driver, milliseconds_on, milliseconds_off, milliseconds_patter_time, now == Py_True);
 	return PyDictFromDriverState(&driver);
 }
 
