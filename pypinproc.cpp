@@ -699,7 +699,7 @@ PinPROC_write_data(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	int address;
 	int data;
 	static char *kwlist[] = {"module", "address", "data", NULL};
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &module, &address, &data))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiI", kwlist, &module, &address, &data))
 	{
 		return NULL;
 	}
@@ -736,7 +736,8 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 {
 	PyObject *list = PyList_New(0);
 	
-	const int maxEvents = 16;
+	//const int maxEvents = 16;
+	const int maxEvents = 2048;
 	PREvent events[maxEvents];
 	int numEvents = PRGetEvents(self->handle, events, maxEvents);
 	if (numEvents < 0)
@@ -1263,6 +1264,11 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "EventTypeSwitchClosedNondebounced", kPREventTypeSwitchClosedNondebounced);
     PyModule_AddIntConstant(m, "EventTypeSwitchOpenNondebounced", kPREventTypeSwitchOpenNondebounced);
     PyModule_AddIntConstant(m, "EventTypeDMDFrameDisplayed", kPREventTypeDMDFrameDisplayed);
+    PyModule_AddIntConstant(m, "EventTypeBurstSwitchOpen", kPREventTypeBurstSwitchOpen);
+    PyModule_AddIntConstant(m, "EventTypeBurstSwitchClosed", kPREventTypeBurstSwitchClosed);
+    PyModule_AddIntConstant(m, "EventTypeAccelerometerX", kPREventTypeAccelerometerX);
+    PyModule_AddIntConstant(m, "EventTypeAccelerometerY", kPREventTypeAccelerometerY);
+    PyModule_AddIntConstant(m, "EventTypeAccelerometerZ", kPREventTypeAccelerometerZ);
     PyModule_AddIntConstant(m, "MachineTypeWPC", kPRMachineWPC);
     PyModule_AddIntConstant(m, "MachineTypeWPCAlphanumeric", kPRMachineWPCAlphanumeric);
     PyModule_AddIntConstant(m, "MachineTypeWPC95", kPRMachineWPC95);
