@@ -25,5 +25,5 @@ module1 = Extension("pinproc",
 					sources = ['pypinproc.cpp', 'dmdutil.cpp', 'dmd.c'])
 
 setup(name = "pinproc",
-      version = "1.1",
+      version = "1.2",
       ext_modules = [module1])
