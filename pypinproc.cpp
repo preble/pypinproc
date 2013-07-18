@@ -1269,6 +1269,7 @@ PyMODINIT_FUNC initpinproc()
     PyModule_AddIntConstant(m, "EventTypeAccelerometerX", kPREventTypeAccelerometerX);
     PyModule_AddIntConstant(m, "EventTypeAccelerometerY", kPREventTypeAccelerometerY);
     PyModule_AddIntConstant(m, "EventTypeAccelerometerZ", kPREventTypeAccelerometerZ);
+    PyModule_AddIntConstant(m, "EventTypeAccelerometerIRQ", kPREventTypeAccelerometerIRQ);
     PyModule_AddIntConstant(m, "MachineTypeWPC", kPRMachineWPC);
     PyModule_AddIntConstant(m, "MachineTypeWPCAlphanumeric", kPRMachineWPCAlphanumeric);
     PyModule_AddIntConstant(m, "MachineTypeWPC95", kPRMachineWPC95);
