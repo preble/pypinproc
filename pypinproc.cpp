@@ -79,7 +79,7 @@ PRMachineType PyObjToMachineType(PyObject *machineTypeObj)
 	else if (strcmp(PyString_AsString(machineTypeObj), "sternWhitestar") == 0)
 		return  kPRMachineSternWhitestar;
 	else if (strcmp(PyString_AsString(machineTypeObj), "pdb") == 0)
-		return kPRMachineCustom;
+		return kPRMachinePDB;
 	else if (strcmp(PyString_AsString(machineTypeObj), "custom") == 0)
 		return kPRMachineCustom;
 	
