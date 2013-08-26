@@ -18,7 +18,7 @@ if 'ARCH' in os.environ:
 
 module1 = Extension("pinproc",
 					include_dirs = ['../libpinproc/include'],
-					libraries = ['usb', 'ftdi', 'pinproc'],
+					libraries = ['usb', 'ftdi1', 'pinproc'],
 					library_dirs = ['/usr/local/lib', '../libpinproc/bin'],
 					extra_compile_args = extra_compile_args,
 					extra_link_args = extra_link_args,
