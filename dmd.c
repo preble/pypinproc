@@ -225,12 +225,10 @@ DMDColor *DMDGetAlphaMap(void)
 				char dst_dot = (dst & 0xf);
 				char dst_a   = (dst >>  4);
 			
-				float i = (float)(src_dot * src_a) / (15.0f * 15.0f);
-				float j = (float)(dst_dot * dst_a * (0xf - src_a)) / (15.0f * 15.0f * 15.0f);
-			
-				char dot = (char)( (i + j) * 15.0f );
-				char a   = MAX(src_a, dst_a);
-			
+				//Implementation of these formulas: http://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending
+				char a = src_a + dst_a * ((15.0f - src_a) / 15.0f);
+				char dot = (src_dot * (src_a / 15.0f) + dst_dot * (dst_a / 15.0f) * ((15.0f - src_a) / 15.0f)) / (a / 15.0f);
+				
 				gAlphaMap[src * 256 + dst] = (a << 4) | (dot & 0xf);
 				// fprintf(stderr, "%02x -> %02x = %02x\n", src, dst, (unsigned char)gAlphaMap[src * 256 + dst]);
 			}
