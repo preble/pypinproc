@@ -710,7 +710,7 @@ PinPROC_write_data(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 		PyErr_SetString(PyExc_IOError, PRGetLastErrorText()); //"Error writing data");
 		return NULL;
 	}
-			
+		
 	if (PRWriteData(self->handle, module, address, 1, (uint32_t *)&data) == kPRSuccess)
 	{
 		Py_INCREF(Py_None);
@@ -770,7 +770,7 @@ PinPROC_led_fade_rate(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwd
 {
 	int boardAddr;
 	int fadeRate;
-	static char *kwlist[] = {"boardAddr", "fadeRate", NULL};
+	static char *kwlist[] = {"board_addr", "fade_rate", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist, &boardAddr, &fadeRate))
 	{
 		return NULL;
@@ -797,7 +797,7 @@ PinPROC_led_color(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	int boardAddr;
 	int LEDIndex;
 	int color;
-	static char *kwlist[] = {"boardAddr", "LEDIndex", "color", NULL};
+	static char *kwlist[] = {"board_addr", "led_index", "color", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &boardAddr, &LEDIndex, &color))
 	{
 		return NULL;
@@ -828,7 +828,7 @@ PinPROC_led_fade(pinproc_PinPROCObject *self, PyObject *args, PyObject *kwds)
 	int LEDIndex;
 	int color;
 	int fadeRate;
-	static char *kwlist[] = {"boardAddr", "LEDIndex", "color", "fadeRate", NULL};
+	static char *kwlist[] = {"board_addr", "led_index", "color", "fade_rate", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii", kwlist, &boardAddr, &LEDIndex, &color, &fadeRate))
 	{
 		return NULL;
@@ -858,7 +858,7 @@ PinPROC_led_fade_color(pinproc_PinPROCObject *self, PyObject *args, PyObject *kw
 	int boardAddr;
 	int LEDIndex;
 	int color;
-	static char *kwlist[] = {"boardAddr", "LEDIndex", "color", NULL};
+	static char *kwlist[] = {"board_addr", "led_index", "color", NULL};
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iii", kwlist, &boardAddr, &LEDIndex, &color))
 	{
 		return NULL;
