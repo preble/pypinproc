@@ -404,7 +404,7 @@ PinPROC_driver_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kw
 // PyDict_SetItemString does not steal the reference, so drop ours (was a memory leak)
 static void dict_set_string_int(PyObject *dict, const char *name, long value)
 {
-	PyObject *v = PyLong_FromLong(value);
+	PyObject *v = PyInt_FromLong(value);
 	PyDict_SetItemString(dict, name, v);
 	Py_XDECREF(v);
 }
