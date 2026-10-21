@@ -401,7 +401,14 @@ PinPROC_driver_disable(pinproc_PinPROCObject *self, PyObject *args, PyObject *kw
 	}
 }
 
-#define DICT_SET_STRING_INT(name, value) PyDict_SetItemString(dict, name, Py_BuildValue("i", value))
+// PyDict_SetItemString does not steal the reference, so drop ours (was a memory leak)
+static void dict_set_string_int(PyObject *dict, const char *name, long value)
+{
+	PyObject *v = PyLong_FromLong(value);
+	PyDict_SetItemString(dict, name, v);
+	Py_XDECREF(v);
+}
+#define DICT_SET_STRING_INT(name, value) dict_set_string_int(dict, name, value)
 #define DICT_GET_STRING_INT(name, value) { long v = PyInt_AsLong(PyDict_GetItemString(dict, name)); if (v == -1 && PyErr_Occurred()) return false; value = v; }
 
 PyObject *PyDictFromDriverState(PRDriverState *driver)
@@ -748,10 +755,11 @@ PinPROC_get_events(pinproc_PinPROCObject *self, PyObject *args)
 	for (int i = 0; i < numEvents; i++)
 	{
 		PyObject *dict = PyDict_New();
-		PyDict_SetItemString(dict, "type", Py_BuildValue("i", events[i].type));
-		PyDict_SetItemString(dict, "value", Py_BuildValue("i", events[i].value));
-		PyDict_SetItemString(dict, "time", Py_BuildValue("i", events[i].time));
+		DICT_SET_STRING_INT("type", events[i].type);
+		DICT_SET_STRING_INT("value", events[i].value);
+		DICT_SET_STRING_INT("time", events[i].time);
 		PyList_Append(list, dict);
+		Py_DECREF(dict);   // The list holds its own reference (was a memory leak)
 	}
 	return list;
 }
