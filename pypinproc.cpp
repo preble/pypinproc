@@ -419,7 +419,13 @@ extern "C" {
         }
     }
 
-    #define DICT_SET_STRING_INT(name, value) PyDict_SetItemString(dict, name, Py_BuildValue("i", value))
+    static void dict_set_string_int(PyObject *dict, const char *name, long value)
+    {
+        PyObject *v = PyLong_FromLong(value);
+        PyDict_SetItemString(dict, name, v);
+        Py_XDECREF(v);
+    }
+    #define DICT_SET_STRING_INT(name, value) dict_set_string_int(dict, name, value)
     #define DICT_GET_STRING_INT(name, value) { long v = PyInt_AsLong(PyDict_GetItemString(dict, name)); if (v == -1 && PyErr_Occurred()) return false; value = v; }
 
     PyObject *PyDictFromDriverState(PRDriverState *driver)
@@ -824,9 +830,7 @@ extern "C" {
 
         if (result == kPRSuccess)
         {
-            PyObject* ret = PyLong_FromLong(data);
-            Py_INCREF(ret);
-            return ret;
+            return PyLong_FromLong(data);
         }
         else
         {
@@ -868,10 +872,11 @@ extern "C" {
         for (int i = 0; i < numEvents; i++)
         {
             PyObject *dict = PyDict_New();
-            PyDict_SetItemString(dict, "type", Py_BuildValue("i", events[i].type));
-            PyDict_SetItemString(dict, "value", Py_BuildValue("i", events[i].value));
-            PyDict_SetItemString(dict, "time", Py_BuildValue("i", events[i].time));
+            DICT_SET_STRING_INT("type", events[i].type);
+            DICT_SET_STRING_INT("value", events[i].value);
+            DICT_SET_STRING_INT("time", events[i].time);
             PyList_Append(list, dict);
+            Py_DECREF(dict);
         }
         return list;
     }
