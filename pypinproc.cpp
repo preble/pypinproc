@@ -419,6 +419,7 @@ extern "C" {
         }
     }
 
+    // PyDict_SetItemString does not steal the reference, so drop ours
     static void dict_set_string_int(PyObject *dict, const char *name, long value)
     {
         PyObject *v = PyLong_FromLong(value);
